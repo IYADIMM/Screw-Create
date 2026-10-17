@@ -1,0 +1,52 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Builds and exports
+[Bb]uild/
+[Bb]uilds/*
+!Builds/.gitkeep
+*.apk
+*.aab
+*.unitypackage
+
+# IDE and tooling
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Secrets and signing
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+
+# Test/build outputs
+TestResults/
+CoverageResults/
+Artifacts/
+
