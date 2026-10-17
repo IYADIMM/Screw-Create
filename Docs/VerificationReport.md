@@ -11,6 +11,7 @@ Date: 2026-10-18 (Asia/Dubai)
 - The suite covers fixed PRNG golden output, seed-code checksum round trips, reproducible generation, solver completion, dependency-cycle rejection, 250 generated seeds, screw/coverage/tray rules, assembly dependencies and tolerances, undo, and save recovery.
 - `unity projects verify --strict --expect-editor 6000.6.6f1` scanned 118 files with zero errors, warnings, or unverifiable findings.
 - Every non-meta file below `Assets/` has a matching `.meta` file.
+- Local Git checkpoint `02363ff` records the deterministic Unity logic foundation; ignored generated/cache outputs were excluded.
 - External generation spend is zero.
 
 ## Not yet verified

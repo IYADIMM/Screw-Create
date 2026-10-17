@@ -8,6 +8,7 @@
 - Changed files: exact-version Unity URP project, isolated Core and EditMode assemblies, puzzle engine, deterministic PRNG/generator/solver/seed code, versioned atomic save service, tests, and project records.
 - Tests/results: 11/11 EditMode tests passed in 0.750 seconds; the development sweep verified 250 deterministic solvable seeds. Strict project verification scanned 118 files with zero errors, warnings, missing/orphan metadata, duplicate GUIDs, conflict markers, manifest errors, or editor-version drift.
 - Unity/editor state: Unity 6000.6.6f1 successfully compiled and tested the project headlessly with a Unity Personal license. Input System 1.20.0, URP 17.6.0, and uGUI 2.6.0 are resolved; optional IDE/collaboration packages were removed.
+- Source-control state: stable local root checkpoint `02363ff` created on `main`; this evidence update follows as a focused documentation commit.
 - Blockers/owner: Android Build Support, SDK/NDK Tools, and OpenJDK are absent; Android build/device verification waits for that later milestone. Production identity, privacy URL, ads, signing, and the first visual gate remain user-gated decisions when reached.
 - Unpaid actions pending: expand the generator constraint model and 30-seed regression catalog, then bind the tested core to a TEMP_ graybox scene.
 - Paid actions pending: none proposed; external-generation spend is zero.
