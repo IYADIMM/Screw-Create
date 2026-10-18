@@ -15,6 +15,7 @@ namespace ScrewAndCreate.Presentation
     public sealed class WindmillVerticalSliceController : MonoBehaviour
     {
         public Camera GameplayCamera;
+        public PlayfieldFitter PlayfieldFitter;
         public ScrewView[] Screws = Array.Empty<ScrewView>();
         public PartView[] Parts = Array.Empty<PartView>();
         public SocketView[] Sockets = Array.Empty<SocketView>();
@@ -47,7 +48,18 @@ namespace ScrewAndCreate.Presentation
         bool _paused;
         bool _completionPlayed;
         string _hintedItem = string.Empty;
-        readonly Dictionary<string, Vector3> _screwHomes = new Dictionary<string, Vector3>();
+        readonly Dictionary<string, ScrewPose> _screwHomes = new Dictionary<string, ScrewPose>();
+        readonly Dictionary<string, Material[]> _partHomeMaterials = new Dictionary<string, Material[]>();
+        Bounds _essentialBounds;
+        bool _hasEssentialBounds;
+        float _fittedAspect = -1f;
+
+        readonly struct ScrewPose
+        {
+            public readonly Vector3 Position;
+            public readonly Quaternion Rotation;
+            public ScrewPose(Vector3 position, Quaternion rotation) { Position = position; Rotation = rotation; }
+        }
 
         public PuzzleEngine Engine => _engine;
         public bool IsPaused => _paused;
@@ -58,15 +70,37 @@ namespace ScrewAndCreate.Presentation
             BindViews();
             _definition = CreateDefinition();
             _save = new AtomicJsonSaveService(Path.Combine(Application.persistentDataPath, "phase2-windmill.json"));
-            foreach (var screw in Screws) if (screw != null) _screwHomes[screw.Id] = screw.transform.localPosition;
-            foreach (var part in Parts) if (part != null) { part.HomePosition = part.transform.position; part.HomeRotation = part.transform.rotation; }
+            foreach (var screw in Screws) if (screw != null) _screwHomes[screw.Id] = new ScrewPose(screw.transform.localPosition, screw.transform.localRotation);
+            foreach (var part in Parts) if (part != null)
+            {
+                part.HomePosition = part.transform.position; part.HomeRotation = part.transform.rotation;
+                _partHomeMaterials[part.Id] = part.GetComponentsInChildren<Renderer>(true).Select(x => x.sharedMaterial).ToArray();
+            }
+            CaptureEssentialBounds();
             RestartImmediate();
         }
 
         void Start()
         {
             // Prefab instance links can settle after Awake when a scene is reloaded by the test runner.
-            BindViews(); RestoreScrewTransforms(); RefreshVisuals();
+            BindViews(); FitPlayfield(true); ReconcilePresentation();
+        }
+
+        void OnDisable()
+        {
+            if (_engine == null) return;
+            StopAllCoroutines(); _busy = false; ReconcilePresentation();
+        }
+
+        void OnApplicationPause(bool paused)
+        {
+            if (!paused || _engine == null) return;
+            StopAllCoroutines(); _busy = false; ReconcilePresentation();
+        }
+
+        void OnApplicationFocus(bool focused)
+        {
+            if (focused && _engine != null) ReconcilePresentation();
         }
 
         void BindViews()
@@ -78,6 +112,7 @@ namespace ScrewAndCreate.Presentation
 
         void Update()
         {
+            FitPlayfield(false);
             if (_completionPlayed && BladesRoot != null) BladesRoot.Rotate(0f, 0f, 28f * Time.unscaledDeltaTime, Space.Self);
             if (_paused || _busy || GameplayCamera == null) return;
             if (TryReadPointerPress(out var screenPosition, out var pointerId)) ProcessPointerPress(screenPosition, pointerId);
@@ -95,7 +130,15 @@ namespace ScrewAndCreate.Presentation
             return false;
         }
 
-        static bool PointerOverUi(int pointerId) => EventSystem.current != null && (pointerId < 0 ? EventSystem.current.IsPointerOverGameObject() : EventSystem.current.IsPointerOverGameObject(pointerId));
+        bool PointerBlockedByInteractiveUi(Vector2 screenPosition)
+        {
+            if ((PausePanel != null && PausePanel.activeInHierarchy) || (SettingsPanel != null && SettingsPanel.activeInHierarchy) ||
+                (RestartPanel != null && RestartPanel.activeInHierarchy) || (CompletionPanel != null && CompletionPanel.activeInHierarchy)) return true;
+            if (EventSystem.current == null) return false;
+            var data = new PointerEventData(EventSystem.current) { position = screenPosition };
+            var hits = new List<RaycastResult>(); EventSystem.current.RaycastAll(data, hits);
+            return hits.Any(hit => hit.gameObject.GetComponentInParent<Selectable>() != null);
+        }
 
         void UpdateAssemblyDrag()
         {
@@ -112,24 +155,32 @@ namespace ScrewAndCreate.Presentation
                 if (plane.Raycast(ray, out var distance)) view.transform.position = ray.GetPoint(distance);
             }
             if (!released) return;
-            if (Physics.Raycast(GameplayCamera.ScreenPointToRay(position), out var hit, 100f, ~0, QueryTriggerInteraction.Collide))
-            {
-                var socket = hit.collider.GetComponentInParent<SocketView>(); if (socket != null) { AssembleSelected(socket.Id); return; }
-            }
+            var socket = InteractionHits(position).Select(hit => hit.collider.GetComponentInParent<SocketView>()).FirstOrDefault(x => x != null);
+            if (socket != null) { AssembleSelected(socket.Id); return; }
             Status("That spot does not fit"); RefreshVisuals();
         }
 
         public bool ProcessPointerPress(Vector2 screenPosition, int pointerId = -1)
         {
-            if (_paused || _busy || GameplayCamera == null || PointerOverUi(pointerId)) return false;
-            if (!Physics.Raycast(GameplayCamera.ScreenPointToRay(screenPosition), out var hit, 100f, ~0, QueryTriggerInteraction.Collide)) return false;
-            var screw = hit.collider.GetComponentInParent<ScrewView>();
-            if (screw != null) { SelectScrew(screw); return true; }
-            var part = hit.collider.GetComponentInParent<PartView>();
-            if (part != null && _engine.CaptureSnapshot().TrayPartIds.Contains(part.Id)) { SelectTrayPart(part.Id); return true; }
-            var socket = hit.collider.GetComponentInParent<SocketView>();
-            if (socket != null && !string.IsNullOrEmpty(_selectedPart)) { AssembleSelected(socket.Id); return true; }
+            if (_paused || _busy || GameplayCamera == null || PointerBlockedByInteractiveUi(screenPosition)) return false;
+            var trayIds = _engine.CaptureSnapshot().TrayPartIds;
+            foreach (var hit in InteractionHits(screenPosition))
+            {
+                var part = hit.collider.GetComponentInParent<PartView>();
+                if (part != null && trayIds.Contains(part.Id)) { SelectTrayPart(part.Id); return true; }
+                var screw = hit.collider.GetComponentInParent<ScrewView>();
+                if (screw != null) { SelectScrew(screw); return true; }
+                var socket = hit.collider.GetComponentInParent<SocketView>();
+                if (socket != null && !string.IsNullOrEmpty(_selectedPart)) { AssembleSelected(socket.Id); return true; }
+            }
             return false;
+        }
+
+        RaycastHit[] InteractionHits(Vector2 screenPosition)
+        {
+            var mask = LayerMask.GetMask("GameplayInteraction");
+            return Physics.RaycastAll(GameplayCamera.ScreenPointToRay(screenPosition), 100f, mask, QueryTriggerInteraction.Ignore)
+                .OrderBy(hit => hit.distance).ThenBy(hit => hit.collider.name, StringComparer.Ordinal).ToArray();
         }
 
         public void SelectScrew(ScrewView view)
@@ -141,16 +192,19 @@ namespace ScrewAndCreate.Presentation
 
         IEnumerator RemoveSequence(ScrewView view)
         {
+            var result = _engine.TryRemoveScrew(view.Id);
+            if (!result.Success) { Status(result.Reason); yield break; }
             _busy = true; Status("Loosening brass screw…");
             if (ScrewParticles != null) { ScrewParticles.transform.position = view.transform.position; ScrewParticles.Play(true); }
-            var start = view.transform.localPosition; var duration = ReducedMotion ? 0.08f : 0.42f;
+            var pose = _screwHomes[view.Id]; var duration = ReducedMotion ? 0.08f : 0.42f;
             for (var elapsed = 0f; elapsed < duration; elapsed += Time.unscaledDeltaTime)
             {
-                var t = Mathf.Clamp01(elapsed / duration); view.transform.localRotation = Quaternion.Euler(0f, t * 540f, 0f); view.transform.localPosition = start + Vector3.up * (0.32f * t); yield return null;
+                var t = Mathf.Clamp01(elapsed / duration);
+                view.transform.localRotation = pose.Rotation * Quaternion.AngleAxis(t * 540f, Vector3.up);
+                view.transform.localPosition = pose.Position - (pose.Rotation * Vector3.up) * (0.32f * t);
+                yield return null;
             }
-            var result = _engine.TryRemoveScrew(view.Id);
-            if (!result.Success) { view.transform.localPosition = start; Status(result.Reason); }
-            _busy = false; RefreshVisuals();
+            _busy = false; ReconcilePresentation();
         }
 
         public void SelectTrayPart(string partId)
@@ -178,7 +232,7 @@ namespace ScrewAndCreate.Presentation
         public void Undo()
         {
             if (_busy || !_engine.TryUndo()) { Status("Nothing to undo"); return; }
-            _selectedPart = string.Empty; RestoreScrewTransforms(); RefreshVisuals(); Status("Last move restored");
+            _selectedPart = string.Empty; _selectedRotation = 0; _hintedItem = string.Empty; ReconcilePresentation(); Status("Last move restored");
         }
 
         public void Hint()
@@ -210,19 +264,21 @@ namespace ScrewAndCreate.Presentation
             if (!_save.TryLoad(out var data, out var recovered) || data.ActivePuzzle == null) { Status("No valid saved workbench"); return; }
             if (!_engine.TryRestoreSnapshot(data.ActivePuzzle, out var reason)) { Status("Saved workbench rejected: " + reason); return; }
             HapticsEnabled = data.HapticsEnabled; ReducedMotion = data.ReducedCameraMotion; MasterVolume = data.MasterVolume; MusicVolume = data.MusicVolume; SfxVolume = data.SfxVolume; AudioListener.volume = MasterVolume;
-            RestoreScrewTransforms(); RefreshVisuals(); Status(recovered ? "Recovered previous save" : "Workbench restored");
+            _selectedPart = string.Empty; _selectedRotation = 0; _hintedItem = string.Empty; ReconcilePresentation(); Status(recovered ? "Recovered previous save" : "Workbench restored");
         }
 
         void RestartImmediate()
         {
             _engine = new PuzzleEngine(_definition ?? CreateDefinition()); _selectedPart = string.Empty; _selectedRotation = 0; _completionPlayed = false; _hintedItem = string.Empty;
-            if (CompletionPanel != null) CompletionPanel.SetActive(false); RestoreScrewTransforms(); RefreshVisuals(); Status("Remove a glowing brass screw");
+            if (CompletionPanel != null) CompletionPanel.SetActive(false); ReconcilePresentation(); Status("Remove a glowing brass screw");
         }
 
         void RestoreScrewTransforms()
         {
-            foreach (var screw in Screws) if (screw != null && _screwHomes.TryGetValue(screw.Id, out var home)) { screw.transform.localPosition = home; screw.transform.localRotation = Quaternion.identity; }
+            foreach (var screw in Screws) if (screw != null && _screwHomes.TryGetValue(screw.Id, out var home)) { screw.transform.localPosition = home.Position; screw.transform.localRotation = home.Rotation; }
         }
+
+        public void ReconcilePresentation() { RestoreScrewTransforms(); RefreshVisuals(); }
 
         void RefreshVisuals()
         {
@@ -232,17 +288,59 @@ namespace ScrewAndCreate.Presentation
                 if (screw == null) continue; var removed = state.RemovedScrewIds.Contains(screw.Id); screw.gameObject.SetActive(!removed);
                 if (!removed && screw.TargetRenderer != null) screw.TargetRenderer.sharedMaterial = screw.Id == _hintedItem ? HintMaterial : (_engine.CanRemoveScrew(screw.Id, out _) ? BrassMaterial : BlockedMaterial);
             }
-            for (var i = 0; i < state.TrayPartIds.Length; i++) { var view = Parts.FirstOrDefault(x => x.Id == state.TrayPartIds[i]); if (view != null && view.TrayTarget != null) { view.gameObject.SetActive(true); view.transform.position = view.TrayTarget.position; view.transform.rotation = view.TrayTarget.rotation; } }
             foreach (var view in Parts)
             {
                 if (view == null) continue;
+                var trayIndex = Array.IndexOf(state.TrayPartIds, view.Id);
                 if (state.AssembledPartIds.Contains(view.Id) && view.SocketTarget != null) { view.gameObject.SetActive(true); view.transform.position = view.SocketTarget.position; view.transform.rotation = view.SocketTarget.rotation; }
+                else if (trayIndex >= 0)
+                {
+                    view.gameObject.SetActive(true); view.transform.position = TrayWorldPosition(trayIndex);
+                    view.transform.rotation = view.Id == _selectedPart ? Quaternion.Euler(0f, 0f, _selectedRotation) : Quaternion.identity;
+                }
                 else if (!state.ReleasedPartIds.Contains(view.Id)) { view.gameObject.SetActive(true); view.transform.position = view.HomePosition; view.transform.rotation = view.HomeRotation; }
+                else view.gameObject.SetActive(false);
+                ApplyPartMaterials(view, view.Id == _selectedPart ? SelectedMaterial : null);
             }
             foreach (var socket in Sockets) if (socket != null && socket.TargetRenderer != null) socket.TargetRenderer.enabled = !string.IsNullOrEmpty(_selectedPart) && string.Equals(socket.Id, "Socket-" + _selectedPart, StringComparison.Ordinal);
             if (TrayText != null) TrayText.text = $"ACTIVE TRAY  {state.TrayPartIds.Length}/3";
             if (SeedText != null) SeedText.text = "DEV • WINDMILL • 0007";
+            Physics.SyncTransforms();
             if (state.Phase == PuzzlePhase.Complete && !_completionPlayed) StartCoroutine(CompleteOnce());
+        }
+
+        Vector3 TrayWorldPosition(int index)
+        {
+            var x = new[] { 0.28f, 0.5f, 0.72f }[Mathf.Clamp(index, 0, 2)];
+            var ray = GameplayCamera.ViewportPointToRay(new Vector3(x, 0.23f, 0f));
+            var plane = new Plane(Vector3.forward, new Vector3(0f, 0f, -0.55f));
+            return plane.Raycast(ray, out var distance) ? ray.GetPoint(distance) : Vector3.zero;
+        }
+
+        void ApplyPartMaterials(PartView view, Material selected)
+        {
+            var renderers = view.GetComponentsInChildren<Renderer>(true);
+            if (!_partHomeMaterials.TryGetValue(view.Id, out var originals)) return;
+            for (var i = 0; i < renderers.Length && i < originals.Length; i++) renderers[i].sharedMaterial = selected != null ? selected : originals[i];
+        }
+
+        void CaptureEssentialBounds()
+        {
+            _hasEssentialBounds = false;
+            foreach (var renderer in Parts.Where(x => x != null).SelectMany(x => x.GetComponentsInChildren<Renderer>(true)).Concat(Screws.Where(x => x != null).SelectMany(x => x.GetComponentsInChildren<Renderer>(true))))
+            {
+                if (!_hasEssentialBounds) { _essentialBounds = renderer.bounds; _hasEssentialBounds = true; }
+                else _essentialBounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        void FitPlayfield(bool force)
+        {
+            if (GameplayCamera == null || PlayfieldFitter == null || !_hasEssentialBounds) return;
+            var aspect = GameplayCamera.aspect;
+            if (!force && Mathf.Abs(aspect - _fittedAspect) < 0.0001f) return;
+            PlayfieldFitter.Fit(_essentialBounds, aspect); _fittedAspect = aspect;
+            if (_engine != null) RefreshVisuals();
         }
 
         IEnumerator CompleteOnce()

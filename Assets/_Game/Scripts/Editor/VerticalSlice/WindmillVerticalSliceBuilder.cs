@@ -56,7 +56,7 @@ namespace ScrewAndCreate.Editor.VerticalSlice
             BuildUi(hudRoot.transform, controller, materials, out var status, out var trayText, out var seedText, out var pause, out var settings, out var restart, out var completion);
             BuildEventSystem(composition.transform);
 
-            controller.GameplayCamera = camera; controller.Screws = screws; controller.Parts = parts; controller.Sockets = sockets; controller.BladesRoot = bladesRoot;
+            controller.GameplayCamera = camera; controller.PlayfieldFitter = camera.GetComponent<PlayfieldFitter>(); controller.Screws = screws; controller.Parts = parts; controller.Sockets = sockets; controller.BladesRoot = bladesRoot;
             controller.StatusText = status; controller.TrayText = trayText; controller.SeedText = seedText; controller.PausePanel = pause; controller.SettingsPanel = settings; controller.RestartPanel = restart; controller.CompletionPanel = completion;
             controller.BrassMaterial = materials["Brass"]; controller.BlockedMaterial = materials["Blocked"]; controller.SelectedMaterial = materials["Selected"]; controller.HintMaterial = materials["Hint"]; controller.GhostMaterial = materials["Ghost"];
             controller.ScrewParticles = particles;
@@ -163,6 +163,7 @@ namespace ScrewAndCreate.Editor.VerticalSlice
         {
             var go = new GameObject("PortraitCamera"); go.transform.SetParent(parent); go.tag = "MainCamera";
             var camera = go.AddComponent<Camera>(); camera.orthographic = true; camera.orthographicSize = 5.7f; camera.nearClipPlane = 0.1f; camera.farClipPlane = 100f; camera.backgroundColor = new Color(0.16f, 0.08f, 0.04f);
+            var fitter = go.AddComponent<PlayfieldFitter>(); fitter.TargetCamera = camera;
             go.transform.position = new Vector3(0f, 1.5f, -12f); go.transform.rotation = Quaternion.identity; return camera;
         }
 
@@ -209,14 +210,17 @@ namespace ScrewAndCreate.Editor.VerticalSlice
             {
                 var angle = i * 90f; var rotation = Quaternion.Euler(0, 0, angle); var direction = rotation * Vector3.up;
                 var partGo = BuildBlade($"TEMP_Blade_P{i + 1}", root.transform, direction * 1.48f, rotation, m);
+                SetLayerRecursively(partGo, LayerMask.NameToLayer("GameplayInteraction"));
                 var part = partGo.AddComponent<PartView>(); part.Id = $"P{i + 1}"; part.TrayTarget = trayTargets[i % 3];
                 var socketTarget = new GameObject($"SocketTarget_P{i + 1}"); socketTarget.transform.SetParent(socketRoot); socketTarget.transform.position = root.transform.TransformPoint(direction * 1.48f); socketTarget.transform.rotation = rotation; part.SocketTarget = socketTarget.transform;
                 var ghostGo = Primitive($"Ghost_P{i + 1}", PrimitiveType.Cube, socketTarget.transform, Vector3.zero, new Vector3(0.88f, 2.28f, 0.12f), m["Ghost"]);
                 var socket = ghostGo.AddComponent<SocketView>(); socket.Id = $"Socket-P{i + 1}"; socket.TargetRenderer = ghostGo.GetComponent<Renderer>(); socket.TargetRenderer.enabled = false;
+                SetLayerRecursively(ghostGo, LayerMask.NameToLayer("GameplayInteraction"));
                 var screwGo = Primitive($"TEMP_Screw_S{i + 1}", PrimitiveType.Cylinder, parent, root.transform.TransformPoint(direction * 1.75f) + new Vector3(0, 0, -0.42f), new Vector3(0.3f, 0.15f, 0.3f), m["Brass"], Quaternion.Euler(90, 0, 0));
                 var screw = screwGo.AddComponent<ScrewView>(); screw.Id = $"S{i + 1}"; screw.TargetRenderer = screwGo.GetComponent<Renderer>();
                 var slotA = Primitive("Phillips_A", PrimitiveType.Cube, screwGo.transform, new Vector3(0, 0.18f, 0), new Vector3(0.38f, 0.06f, 0.09f), m["Blocked"]);
                 var slotB = Primitive("Phillips_B", PrimitiveType.Cube, screwGo.transform, new Vector3(0, 0.18f, 0), new Vector3(0.09f, 0.06f, 0.38f), m["Blocked"]);
+                SetLayerRecursively(screwGo, LayerMask.NameToLayer("GameplayInteraction"));
                 partList.Add(part); socketList.Add(socket); screwList.Add(screw);
             }
             parts = partList.ToArray(); sockets = socketList.ToArray(); screws = screwList.ToArray();
@@ -247,19 +251,21 @@ namespace ScrewAndCreate.Editor.VerticalSlice
             var canvasGo = new GameObject("PortraitCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster)); canvasGo.transform.SetParent(parent); var canvas = canvasGo.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGo.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1080, 1920); scaler.matchWidthOrHeight = 1f;
             var safe = new GameObject("SafeArea", typeof(RectTransform), typeof(SafeAreaFitter)); safe.transform.SetParent(canvasGo.transform, false); Stretch(safe.GetComponent<RectTransform>());
-            var top = Panel("TopWoodHUD", safe.transform, new Vector2(0.04f, 0.86f), new Vector2(0.96f, 0.98f), new Color(0.33f, 0.14f, 0.05f, 0.96f));
+            var top = Panel("TopWoodHUD", safe.transform, new Vector2(0.04f, 0.86f), new Vector2(0.96f, 0.98f), new Color(0.33f, 0.14f, 0.05f, 0.96f)); top.GetComponent<Image>().raycastTarget = false;
             Label("LevelLabel", top.transform, "LEVEL 7     ☆ ☆ ☆     WINDMILL", 38, TextAnchor.MiddleCenter, Color.white, new Vector2(0.2f, 0), new Vector2(0.86f, 1));
-            status = Label("Status", safe.transform, "Remove a glowing brass screw", 31, TextAnchor.MiddleCenter, Cream, new Vector2(0.08f, 0.74f), new Vector2(0.92f, 0.81f));
-            var tray = Panel("BottomTrayHUD", safe.transform, new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.19f), new Color(0.95f, 0.82f, 0.62f, 0.97f));
+            status = Label("Status", safe.transform, "Remove a glowing brass screw", 31, TextAnchor.MiddleCenter, Cream, new Vector2(0.08f, 0.81f), new Vector2(0.92f, 0.85f));
+            var tray = Panel("BottomTrayHUD", safe.transform, new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.19f), new Color(0.95f, 0.82f, 0.62f, 0.97f)); tray.GetComponent<Image>().raycastTarget = false;
             trayText = Label("TrayCount", tray.transform, "ACTIVE TRAY  0/3", 30, TextAnchor.UpperCenter, Wood, new Vector2(0.2f, 0.66f), new Vector2(0.8f, 0.96f));
-            seedText = Label("SeedDisplay", tray.transform, "DEV • WINDMILL • 0007", 20, TextAnchor.LowerCenter, Wood, new Vector2(0.2f, 0.02f), new Vector2(0.8f, 0.24f));
+            var developer = new GameObject("DeveloperControls", typeof(RectTransform)); developer.transform.SetParent(tray.transform, false); Stretch(developer.GetComponent<RectTransform>());
+            seedText = Label("SeedDisplay", developer.transform, "DEV • WINDMILL • 0007", 20, TextAnchor.LowerCenter, Wood, new Vector2(0.2f, 0.02f), new Vector2(0.8f, 0.24f));
             Button("UndoButton", tray.transform, "↶", new Vector2(0.01f, 0.12f), new Vector2(0.18f, 0.88f), Teal, controller.Undo);
             Button("HintButton", tray.transform, "?", new Vector2(0.82f, 0.12f), new Vector2(0.99f, 0.88f), Teal, controller.Hint);
             Button("RotateButton", tray.transform, "ROTATE", new Vector2(0.62f, 0.28f), new Vector2(0.8f, 0.66f), Wood, controller.RotateSelected);
             Button("PauseButton", top.transform, "Ⅱ", new Vector2(0.88f, 0.12f), new Vector2(0.98f, 0.88f), Teal, controller.TogglePause);
             Button("RestartButton", top.transform, "RESTART", new Vector2(0.02f, 0.12f), new Vector2(0.2f, 0.88f), Wood, controller.RequestRestart);
-            Button("SaveButton", tray.transform, "SAVE", new Vector2(0.2f, 0.28f), new Vector2(0.38f, 0.66f), Wood, controller.Save);
-            Button("LoadButton", tray.transform, "LOAD", new Vector2(0.4f, 0.28f), new Vector2(0.58f, 0.66f), Wood, controller.Load);
+            Button("SaveButton", developer.transform, "SAVE", new Vector2(0.2f, 0.28f), new Vector2(0.38f, 0.66f), Wood, controller.Save);
+            Button("LoadButton", developer.transform, "LOAD", new Vector2(0.4f, 0.28f), new Vector2(0.58f, 0.66f), Wood, controller.Load);
+            developer.SetActive(false);
             pause = Modal("PausePanel", safe.transform, "PAUSED\nTap pause to resume", controller.TogglePause);
             settings = Modal("SettingsPanel", safe.transform, "SETTINGS\nMaster 100%  Music 80%  SFX 100%\nHaptics On  Reduced Motion Off", controller.ToggleSettings);
             Button("MasterVolume", settings.transform, "MASTER", new Vector2(0.06f,0.12f), new Vector2(0.23f,0.28f), Wood, controller.CycleMasterVolume);
@@ -290,7 +296,7 @@ namespace ScrewAndCreate.Editor.VerticalSlice
         static Text Label(string name, Transform parent, string text, int size, TextAnchor alignment, Color color, Vector2 min, Vector2 max)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text)); go.transform.SetParent(parent, false); SetAnchors(go.GetComponent<RectTransform>(), min, max);
-            var label = go.GetComponent<Text>(); label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); label.text = text; label.fontSize = size; label.alignment = alignment; label.color = color; label.resizeTextForBestFit = true; return label;
+            var label = go.GetComponent<Text>(); label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); label.text = text; label.fontSize = size; label.alignment = alignment; label.color = color; label.resizeTextForBestFit = true; label.raycastTarget = false; return label;
         }
 
         static Button Button(string name, Transform parent, string text, Vector2 min, Vector2 max, Color color, UnityEngine.Events.UnityAction action)
@@ -305,6 +311,12 @@ namespace ScrewAndCreate.Editor.VerticalSlice
         {
             var go = GameObject.CreatePrimitive(type); go.name = name; go.transform.SetParent(parent); go.transform.localPosition = position; go.transform.localRotation = rotation ?? Quaternion.identity; go.transform.localScale = scale;
             var renderer = go.GetComponent<Renderer>(); if (renderer != null) renderer.sharedMaterial = material; return go;
+        }
+
+        static void SetLayerRecursively(GameObject root, int layer)
+        {
+            root.layer = layer;
+            foreach (Transform child in root.transform) SetLayerRecursively(child.gameObject, layer);
         }
     }
 }
