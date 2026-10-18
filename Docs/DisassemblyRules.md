@@ -1,216 +1,145 @@
 # Screw & Create — Disassembly Rules
 
-Status: **PROPOSED — not implemented**
-Rule set: Controlled hybrid disassembly
+Status: **PHASE 2.1 CORRECTED SPECIFICATION — not implemented in Unity**
 
-## 1. Authoritative state
+Rule set: `phase-2.1-baseboard-relocation-v1`
 
-The logical state contains only deterministic puzzle data:
+## 1. Authoritative logical state
 
-- `ScrewLocation[screwId]`: one structural hole, one service hole, one rack slot, or `RemovedWithReleasedComponent` for a future explicitly authored exception.
-- `ComponentState[componentId]`: `Attached`, `Released`, or `Cleared`.
-- `ExposedScrewIds` and `ExposedHoleIds`, derived from attached component layers rather than stored independently where practical.
-- `ActionCount`, `HintCount`, `Revision`, and an undo stack of complete snapshots.
-- `Phase`: `Active`, `Complete`, or `FailedDeadlock`.
+A stable snapshot contains:
 
-Transforms, animation progress, particle state, selection highlight, and sound are presentation data and never determine legality or completion.
+- a distinct location for every screw ID;
+- the released component-ID set;
+- phase, action count, hint count and revision;
+- no transforms, colliders, renderer flags, animation time, touch coordinates or UI state.
 
-## 2. Definitions
+Occupancy, exposure, available destination state, legal moves and completion derive from the immutable definition plus the snapshot. Screw identities remain distinct even when screws share appearance or compatibility.
 
-- **Structural hole:** an authored fastener site. An occupied structural hole secures its declared attached components.
-- **Service hole:** a persistent baseboard hole used only to park a screw. It secures no component and has an authored compatibility set.
-- **Rack slot:** a persistent off-board storage location, also with compatibility rules. The first slice uses one slot.
-- **Accessible screw:** a screw whose head is exposed, whose location is selectable, and whose containing object is not already cleared.
-- **Covered:** a screw or hole hidden by at least one attached covering component.
-- **Release dependency:** an authored component that must already be released or cleared before another component may release.
-- **Release closure:** the deterministic repeated release of every newly eligible component after a committed screw transfer.
+## 2. Hole definitions and ownership
 
-## 3. Puzzle initialization
+| Property | Meaning | Launch behavior |
+|---|---|---|
+| Baseboard owner | The hole physically persists for the entire puzzle | May become a destination when all other conditions pass |
+| Component owner | The hole exists only while its owning component remains attached | Never a launch destination; ceases to exist on release |
+| Structural role | The hole is assigned to one component’s fastening set | Reject as destination while that component is attached |
+| Active structural hole | Structural hole currently occupied while its component is attached | Its occupant contributes to fastening |
+| Vacated active structural hole | Empty structural hole whose component remains attached | Still rejects parking; this prevents re-fastening ambiguity |
+| Retired structural hole | Persistent baseboard structural hole whose component has released | Legal universal parking destination when exposed and empty |
+| Dedicated parking role | Baseboard hole with no fastening effect | Legal universal parking destination when exposed and empty |
+| Covered hole | At least one declared covering component remains attached | Cannot be selected or used as a destination |
 
-1. Validate unique IDs and every reference.
-2. Validate that each screw has exactly one initial location.
-3. Validate one occupant per hole or rack slot.
-4. Validate destination compatibility and nonempty destination sets.
-5. Validate acyclic cover and release-dependency graphs for the launch rule set.
-6. Build the initial snapshot from authored data.
-7. Derive exposure from visual layers and attached covering components.
-8. Run the solver from the initial snapshot before the level is accepted for play.
-9. Reconcile every view from the accepted snapshot.
+A hole is not legal merely because it is empty. Ownership, persistence, coverage, occupancy and fastening state all apply.
 
-## 4. Screw accessibility
+## 3. Accessibility
 
-A screw is selectable when all conditions hold:
+Logical screw accessibility requires:
 
-1. The puzzle phase is `Active`.
-2. The screw occupies a structural hole, service hole, or rack slot.
-3. Its head is not covered by an attached component.
-4. Its view is active, on the interaction layer, and inside the fitted playfield or rack region.
-5. No modal UI blocks the pointer.
-6. No screw-transfer animation is already resolving.
+1. the puzzle is active;
+2. the screw occupies an existing hole;
+3. every component declared to cover that hole is released.
 
-Accessibility is recalculated after every release closure, undo, restart, load, and lifecycle reconciliation.
+The logical rule does not query a camera, collider, GameObject, renderer, modal, animation or pointer position. The presentation may temporarily suppress input during reconciliation, but that does not change the engine’s legal-move set.
 
-## 5. Covered or blocked screws
+## 4. Legal destination
 
-- An attached covering component blocks every screw ID listed in its cover relationship.
-- A covered screw cannot be selected even when its collider is geometrically reachable.
-- A screw can also be blocked because no compatible empty destination exists. It remains selectable for explanation/highlight, but committing a move is unavailable.
-- Invalid taps produce concise feedback and no state mutation.
+For snapshot `s`, hole `h` is a legal parking destination when all conditions hold:
 
-## 6. Screw selection
+1. `h` is owned by the persistent baseboard;
+2. `h` is empty;
+3. `h` is exposed under the authored coverage relation;
+4. `h` is either a dedicated parking hole or a structural hole assigned to a released component;
+5. `h` differs from the screw’s source.
 
-Selecting an accessible screw creates a transient presentation selection. The engine returns all currently legal destinations. Those destinations illuminate using shape/pattern as well as color. Tapping the selected screw again cancels selection without consuming an action.
+The introductory rule set has one universal screw family. Compatibility checks are therefore true for every intro screw and are not presented to the player.
 
-## 7. Legal screw actions
+## 5. Transfer transaction
 
-The sole launch action is:
+`TransferScrew(screwId, sourceHoleId, destinationHoleId)` is the sole launch action.
 
-`TransferScrew(screwId, sourceLocationId, destinationLocationId)`
+The engine validates the complete command against one snapshot. On success it:
 
-It is legal only when:
+1. stores one pre-move snapshot in history;
+2. changes the screw location from source to destination;
+3. increments action count and revision once;
+4. resolves deterministic release closure;
+5. derives exposure and destination state from the result;
+6. evaluates completion and whether the current snapshot has any legal moves;
+7. publishes one stable result for presentation.
 
-- the source still contains that screw;
-- the screw is accessible;
-- the destination is a different service hole or rack slot;
-- the destination is exposed, persistent, and empty;
-- the destination accepts the screw's authored physical compatibility group;
-- the destination remains present after the deterministic release closure caused by vacating the source;
-- the resulting snapshot passes invariants.
+Validation failure is atomic and changes no logical data or history.
 
-The engine validates the complete transaction before mutation. On success it pushes one undo snapshot, changes the screw location, increments action/revision counters once, resolves releases, and checks completion/deadlock. Visual animation begins only after this commit.
+Parked screws may be transferred again to another legal destination. Moving a parked screw never reattaches a component and never changes a retired structural hole back to an active fastener.
 
-The first release does not allow placing a screw into another structural hole. That capability is deferred because it changes which components are secured and substantially enlarges the solver/state model.
+## 6. Component release and closure
 
-## 8. Invalid screw actions
+A component becomes release-eligible when:
 
-The following reject atomically:
+- every structural hole in its `securedBy` set is empty; and
+- every authored release dependency is already released.
 
-- unknown or covered screw;
-- stale source location;
-- occupied, covered, incompatible, nonpersistent, or identical destination;
-- source or destination belonging to a cleared component;
-- move during modal pause or active transaction;
-- move that would violate a state invariant.
+After a transfer, repeatedly release all eligible components in ordinal component-ID order until no further release is possible. Release is an immediate logical transition. It can:
 
-Rejected actions do not change counters, undo history, component state, screw positions, or selection except for presentation feedback.
+- retire persistent structural holes belonging to the released component;
+- remove component-owned holes from the board;
+- uncover holes and screw heads;
+- satisfy another component’s release dependency.
 
-## 9. Free holes
+Visual falling, sliding, hinging and clearing occur afterward. Completion is evaluated from the stable logical closure and never waits for animation.
 
-- Only authored service holes are legal launch destinations.
-- Structural holes vacated by screws remain visually present but are not storage destinations in the launch rules.
-- Service holes belong to the persistent baseboard in the first slice; they never disappear during release.
-- A covered service hole becomes available immediately after its last covering component releases.
+## 7. Coverage
 
-## 10. Screw storage and relocation
+Coverage is an authored relation from an attached component to a hole ID. A covered hole blocks both its occupant’s selection and its use as a destination. Geometry, raycasts and renderer visibility do not create or remove logical coverage.
 
-- A service hole stores one compatible screw.
-- A rack slot stores one compatible screw and remains accessible throughout the level.
-- A stored screw may be moved again to another legal service hole or rack slot. This supports recovery and lets the solver escape poor earlier placement.
-- Storage has no match-three clearing, color box, automatic deletion, payment gate, or random behavior.
-- Screw location is always explicit; there is no transient logical “in hand” state.
+Definitions with unknown IDs, impossible ownership, duplicate occupancy, invalid securing references, components that release during initialization, or unsupported cyclic dependencies must fail validation before play.
 
-## 11. Wooden component dependencies
+## 8. Storage-capacity invariant
 
-Each component declares:
+Define `E(s)` as the number of exposed, empty, legal destination holes in stable snapshot `s`.
 
-- structural hole IDs that secure it;
-- component IDs that cover it or its fasteners;
-- release dependencies that must already be released/cleared;
-- one authored visual release mode and path identifier;
-- whether it is required for level completion.
+- A structural transfer consumes one destination before closure.
+- Releasing a component can make its empty persistent structural holes legal and can uncover parking holes.
+- Moving a parked screw changes which hole is empty but does not create capacity.
+- A component needing `k` additional transfers cannot release along a route that exposes fewer than `k` destinations before that release.
 
-Dependencies affect logical eligibility. Geometry and collision do not silently create rules.
+The verifier’s `NC01` fixture has three occupied structural holes, two parking holes and no intermediate release. Exhaustive enumeration proves no solution. No rack, screw disappearance or hidden destination may be assumed to repair such a level.
 
-## 12. Structural support
+## 9. Completion, no-move state and recovery
 
-A component remains attached while any declared structural hole contains a screw, or while any release dependency is not satisfied. The launch system does not simulate weight, torque, friction, or center of mass as puzzle authority.
+The puzzle is complete when every required component is released. Screw locations do not otherwise affect completion.
 
-Support rules may later add authored hinges or rails, but each must resolve deterministically from data and be represented in the solver.
+`NoCurrentlyLegalMoves` means only that the present snapshot has no legal transfer. It is not the same as a solver proof of no solution, and undo availability is a separate player-history property. The launch UX may offer undo and restart in a no-move state; it must not manufacture a loss to sell recovery.
 
-## 13. Component release
+Undo restores the exact prior snapshot, including screw locations, released components, counters and derived legal moves. Presentation reconciles to that snapshot.
 
-After a valid transfer, repeatedly:
+## 10. Solver result contract
 
-1. Find attached components with zero occupied securing holes and satisfied release dependencies.
-2. Order simultaneous releases by authored release order, then stable component ID.
-3. Mark them `Released`.
-4. Recalculate covers and exposure.
-5. Continue until no further component becomes eligible.
+The production solver must return one explicit outcome:
 
-The resulting release closure is part of the same player action and undo snapshot.
+- `ProvenSolution` with an action sequence;
+- `ProvenNoSolution` only after exhaustive search of the reachable graph;
+- `ResourceLimitReached` when a state, time or memory limit interrupts search;
+- `Cancelled` when the caller cancels.
 
-## 14. Falling or sliding movement
+`NoCurrentlyLegalMoves` is a state query, not a solver outcome. Resource exhaustion and cancellation must never be reported as a deadlock or proof of no solution.
 
-- Every component uses an authored presentation path: `Drop`, `SlideLeft`, `SlideRight`, `HingeClockwise`, `HingeCounterClockwise`, or a future validated path.
-- The engine records only the logical release result and path ID.
-- Presentation animates from home pose to cleared pose. At animation end the component becomes `Cleared` visually.
-- Interruption reconciles directly to the snapshot's required pose/state.
-- Physics may add noninteractive secondary motion after the deterministic path, but cannot block or enable a move.
+The solver must use:
 
-## 15. Layer exposure
+1. the same transfer and release functions as gameplay and hints;
+2. a canonical state containing each distinct screw’s location plus released components;
+3. stable successors ordered by screw ID and then destination ID;
+4. visited-state pruning;
+5. explicit state/time limits and cancellation;
+6. exhaustive certification for small tutorials;
+7. background or incremental execution for searches large enough to block Unity’s main thread.
 
-Exposure is derived after each release closure. Removing a covering component may expose structural screws and service holes. A lower component does not become selectable merely because its renderer is visible; its authored cover set must be clear.
+Symmetry reduction is allowed only after a proof that the merged screws have identical source behavior, coverage, destination behavior and structural consequences.
 
-## 16. Undo
+## 11. Presentation contract
 
-- Undo restores the complete snapshot before the last successful transfer, including every screw location and component state.
-- One successful transfer plus its entire release closure is one undo step.
-- Hint count may remain cumulative, matching current product policy.
-- Ongoing animations stop and presentation reconciles to the restored snapshot.
-- Invalid actions create no undo entry.
+The engine owns definition validation, state, history, transactions, legality, release closure, completion and solver behavior. The presentation owns hit testing, animation, audio, haptics, camera fitting and UI.
 
-## 17. Restart
+The presentation asks the engine for selectable screws and legal destinations. It commits first, then animates. On pause, focus change, disable, undo, restart or load, it cancels transient motion and reconstructs every view from the authoritative snapshot.
 
-Restart requires confirmation, restores the authored initial snapshot, clears undo and transient presentation state, and preserves settings. It does not regenerate a different puzzle.
+## 12. Evidence boundary
 
-## 18. Hint generation
-
-The solver computes a path from the current snapshot. A hint identifies the next screw and one legal destination from that path. Presentation highlights both and gives a short reason. A hint never mutates puzzle state and never invents a move when no solver path exists.
-
-## 19. Save and resume
-
-Save data must include level identity, disassembly rule/version identity, complete snapshot, and settings. Save after each successful transfer and on pause/focus loss. Load validates IDs, occupancy, compatibility, component closure, counters, and completion/deadlock consistency before replacing active state. Presentation is rebuilt from the restored snapshot.
-
-## 20. Completion detection
-
-The level completes when every component marked `RequiredForCompletion` is released or cleared. Screw locations, unused service holes, remaining baseboard, and optional decorative components do not prevent completion. There is no assembly requirement.
-
-## 21. Unwinnable-state detection
-
-An active state is a deadlock when the solver proves that no completion path exists within the validated state space. “No immediately legal move” is sufficient only when no animation or release closure is pending. The game may show restart and undo; it must not require payment or an advertisement to continue.
-
-The first tutorial slice must be authored so every reachable state is recoverable by moving stored screws or undoing. Later levels may allow solver-proven dead ends only when the causal constraint is readable and undo remains available.
-
-## 22. Solvability verification
-
-- Use deterministic graph search over canonical state: screw locations plus component states.
-- Exclude presentation values and action counters from the solver key.
-- Generate successors in stable screw-ID and destination-ID order.
-- Apply the same engine transaction and release-closure code used by gameplay.
-- Enforce a per-profile state budget and distinguish `Unsolved` from `ResourceLimitReached`.
-- Store at least one solution path and metrics: states visited, shortest known length, opening legal moves, and reachable deadlocks.
-- Reject authored or generated levels that lack a solver proof.
-
-## 23. State invariants
-
-1. Every screw has exactly one valid location.
-2. Every hole/rack slot contains at most one screw.
-3. Every occupied destination accepts its screw.
-4. Cleared components do not cover objects or provide storage destinations.
-5. A released/cleared component has no occupied structural securing hole.
-6. Every attached component with no occupied securing hole is blocked only by an explicit release dependency; otherwise release closure must process it.
-7. `Complete` exactly matches the completion predicate.
-8. `FailedDeadlock` implies incomplete and solver-proven unsolvable.
-9. Successful actions increment action/revision once and create one undo entry.
-10. Presentation state never changes these invariants.
-
-## 24. Optional rule proposals
-
-These are excluded from launch rules until separately approved:
-
-- structural-hole relocation that can re-secure components;
-- storage holes carried by moving components;
-- one-way or consumable fasteners;
-- timed challenges or efficiency medals;
-- procedural physics constraints;
-- cosmetic screw families that do not change compatibility.
+The Python verifier exhaustively validates the five design fixtures and one negative control against this rule model. It does not verify a Unity implementation because no production disassembly engine exists yet.

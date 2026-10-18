@@ -1,148 +1,96 @@
 # Screw & Create — Disassembly Game Design
 
-Status: **PROPOSED — approval required before implementation**
+Status: **PHASE 2.1 CORRECTED DESIGN — production implementation requires approval**
+
 Date: 2026-10-18
-Product direction: premium portrait Android screw-removal and object-disassembly puzzle
 
-## 1. Product definition
+Product: premium portrait Android screw-removal and object-disassembly puzzle
 
-The primary game starts with an assembled wooden object. The player studies its layers, moves accessible screws to legal destinations, releases structural components, and clears the required object. Completion ends at disassembly; rebuilding is not required.
+## 1. Product decision
 
-The product promise is a readable mechanical puzzle with deterministic rules, satisfying material response, reversible mistakes, and levels that are proven solvable. It excludes assumed timers, lives, energy, color sorting, paid boosters, forced advertisements, and arbitrary move penalties.
+The launch game starts with a recognizable wooden object. The player transfers accessible screws into legal holes on the persistent baseboard, releases overlapping components, reveals covered screws and holes, and clears all required components. Release is deterministic and immediate in logical state; motion and falling are presentation that follow the committed state.
 
-Current-code facts are identified as **VERIFIED**. New rules in this document are **PROPOSED** until implemented and tested.
+There is no mandatory rebuilding stage. The existing construction systems and saves remain preserved for a possible later mode.
 
-## 2. Reference-pattern review
+The launch experience excludes timers, lives, energy, advertisements, purchases, paid recovery, color matching, screw purchases, compulsory racks and arbitrary move penalties. The first five levels use one universal screw family.
 
-The two cited store listings show common category patterns: visible layered boards, exposed and covered fasteners, order-dependent removal, components that shift or fall, small portrait HUDs, undo/tool controls, and escalating visual density. One listing explicitly describes choosing bolts in order so boards shift, fall, and expose paths; the other combines screw planning with match-three storage and meta progression. Store reviews also repeatedly criticize forced ads, premature “no moves” states, randomness, and pay-or-restart pressure.
+## 2. Reconciled option matrix
 
-Screw & Create will retain the readable mechanical cause-and-effect while rejecting copied layouts, branding, character art, match-three/color-box rules, forced interruptions, and monetized recovery. Reference observations were taken from the official [Wood Screw listing](https://play.google.com/store/apps/details?id=com.game.screwpuzzle) and [Woodle Screw listing](https://play.google.com/store/apps/details?id=com.wood.bolt.wordle.screw.nuts.puzzle), accessed 2026-10-18.
+| Criterion | A. Controlled hybrid | B. Universal physical relocation | C. Staged onboarding | Selected staged baseboard relocation |
+|---|---|---|---|---|
+| Learnability | Medium: service holes, rack and compatibility arrive together | Medium: “any empty hole” is simple but ambiguous around fastening | High: adds one concept at a time | High: universal screws, no rack, explicit baseboard destination states |
+| Strategic depth | High through several interacting constraints | High through occupancy and hole reuse | Grows gradually but does not by itself define a complete rule system | High enough through coverage, occupancy, retired holes and scarce capacity |
+| Gameplay coherence | Mechanically coherent but the rack is less physical | Strong if ownership and fastening effects are explicit | Strong progression, incomplete as a rules engine | Strong: every screw remains in a real persistent baseboard hole |
+| Implementation effort | High | Medium–high | Depends on the underlying rules | Medium; one transfer action and one release closure |
+| Deadlock risk | Medium; rack can mask capacity defects | High if “empty” ignores ownership or fastening | Low early, unknown later | Measurable; authored levels require exhaustive certification |
+| Content scalability | High, with authoring burden | High | High for teaching sequence | High; compatibility and optional storage can be added after proof |
+| Differentiation | Service/rack logistics | Physical board manipulation | Player-respectful teaching | Physical cause-and-effect, verified fairness and premium presentation |
 
-## 3. Rule-system comparison
+## 3. Selected launch rule system
 
-| Criterion | A. Direct removal | B. Relocation/hole management | C. Controlled hybrid disassembly |
-|---|---|---|---|
-| Core action | Remove an eligible screw from play | Move screws between holes | Transfer one accessible screw from a structural fastener to a compatible service hole or rack slot, then resolve releases |
-| Strategic depth | Low–medium; depends heavily on authored dependencies | High; destination scarcity creates planning | High; combines structural order with visible, bounded destination planning |
-| New-player clarity | Highest | Medium | Medium-high with a short tutorial and explicit destination highlights |
-| Existing-engine compatibility | Highest: current engine already removes screws | Low: no screw-location or hole state exists | Medium: reuses dependency/undo/solver patterns but needs a new disassembly domain |
-| Solvability verification | Simple monotonic search | Larger cyclic search | Bounded cyclic search with deterministic release closure |
-| Trivial-game risk | High if every legal screw can simply disappear | Low | Low if hole compatibility and exposure are authored carefully |
-| Unwinnable-state risk | Low unless structural motion can trap access | High | Controlled; required pre-publication solver proof and recoverable tutorial levels |
-| Touch complexity | Low | Medium | Medium; tap screw, then highlighted destination |
-| Generation | Easy but may feel repetitive | Difficult | Feasible after authored rules and solver are stable |
-| Level flexibility | Moderate | High | Highest: layers, covers, hole exposure, compatibility, and release motion |
-| Animation burden | Extraction and release | Extraction, travel, insertion | Extraction, transfer/insertion, release, and reconciliation |
-| Mobile usability | Strong | Requires generous holes and selection affordances | Strong if destination count is small and targets meet touch-size gates |
-| Production effort | Lowest | High | High but incremental and reusable |
-| Originality opportunity | Mostly presentation | Limited by crowded market pattern | Stronger through physical service-hole logic, structural consequences, and premium fairness |
+Adopt **staged persistent-baseboard relocation** as one coherent launch system:
 
-## 4. Recommendation
+1. The only gameplay command is `TransferScrew(screwId, sourceHoleId, destinationHoleId)`.
+2. A legal destination is an exposed, empty, persistent baseboard hole whose current state permits parking.
+3. A dedicated baseboard parking hole always permits parking when exposed and empty.
+4. A persistent structural hole permits parking only after the component it secured has released. It is then a retired structural hole and does not re-fasten the component.
+5. A structural hole for an attached component never accepts a screw. This avoids re-fastening in the launch rules.
+6. A hole owned by a detachable component is never a launch destination and disappears when that component releases.
+7. Parked screws may move again between legal destinations, preserving recovery options.
+8. All introductory screws are universally compatible. Size or shape compatibility is deferred.
+9. There is no compulsory rack. Optional off-board storage is deferred until a level demonstrates a design need that physical holes cannot satisfy.
+10. After each committed transfer, the engine resolves all newly eligible component releases in stable component-ID order, derives exposure again, then checks completion and the legal-move set.
 
-Adopt **C. Controlled hybrid disassembly** as one coherent rule system.
+This adopts Gemini’s physical relocation idea only after adding ownership, persistence and fastening-state constraints. It adopts Claude’s staged teaching order without treating onboarding advice as a complete rules specification. It removes the original Codex rack and compatibility burden from the introductory system.
 
-Every gameplay action is an atomic `TransferScrew` operation. The player selects an accessible screw seated in a structural fastener, service hole, or rack slot, then selects one compatible empty destination. The engine commits the transfer, evaluates which components have lost all structural fastening, resolves a deterministic release closure, and exposes any newly uncovered screws or service holes.
+## 4. Why the alternatives were adapted
 
-The launch rule set uses:
+The original controlled hybrid created too many introductory concepts and allowed weak level designs to rely on an abstract rack. Its deterministic transactions, release closure, undo and solver requirements remain valuable.
 
-- Structural fastener holes that secure declared components.
-- Persistent, visibly distinct service holes on the baseboard that store screws without securing components.
-- A small persistent workbench rack as a fallback destination.
-- Physical compatibility cues such as shaft diameter or head engraving, not color matching.
-- Deterministic component-release dependencies and presentation-only fall/slide paths.
-- Undo, restart, hints, save/resume, and solver validation.
+Universal relocation is coherent only when “empty hole” is qualified. An empty hole on a detachable component can disappear, a covered hole cannot be selected, and a structural hole for an attached component has a fastening effect. The selected system therefore does not allow every empty hole.
 
-The existing three-slot **part** inventory is removed from the current player presentation. Its code and tests remain preserved for the deferred construction concept. A future screw rack may reuse its layout concepts but must have disassembly-specific state and semantics.
+Staged onboarding correctly separates movement, multiple fasteners, overlap, scarcity and recovery. It required a complete destination policy and executable fixtures before it could establish feasibility.
 
-## 5. Essential, optional, and deferred mechanics
+## 5. Storage-capacity rule
 
-### Launch-essential
+Let `E(s)` be the number of exposed, empty legal parking destinations in stable state `s`. Moving a screw from a structural hole consumes one destination. If that move releases a component, each exposed empty persistent structural hole assigned to that released component becomes a legal destination, and any parking hole uncovered by the release can also increase capacity.
 
-- Accessible/covered screw rules.
-- Atomic screw transfer to service holes or rack slots.
-- Destination compatibility and occupancy.
-- Structural component release and layer exposure.
-- Deterministic state, undo, restart, hint, save/resume, completion, deadlock detection, and solver proof.
-- Clear portrait framing, reliable touch targets, and state-to-presentation reconciliation.
+If a component requires `k` more structural transfers before it releases and no intervening release can expose at least `k` destinations, that route cannot complete. Moving parked screws among legal holes does not increase total capacity by itself.
 
-### Optional after the first validated slice
+The negative control `NC01` proves the earlier contradiction: three fasteners, two fixed parking holes, no earlier release and no screw disappearance yields `PROVEN_NO_SOLUTION`, 13 reachable states and 6 deadlocks.
 
-- Multiple physical screw families with shape-based cues.
-- Hinged or guided components with authored release paths.
-- Optional efficiency stars based on undo-free or near-minimum solutions.
-- Accessibility modes that reinforce physical compatibility with patterns and labels.
+## 6. First five levels
 
-### Deferred
+| Level | New concept | Initial empty legal destinations | Minimum transfers | Reachable states | Reachable deadlocks |
+|---|---|---:|---:|---:|---:|
+| T01 First Release | Select, relocate, release | 1 | 1 | 2 | 0 |
+| T02 Multiple Fasteners | All fasteners must leave | 2 | 2 | 7 | 0 |
+| T03 Overlapping Components | Coverage and reveal | 1 | 2 | 10 | 0 |
+| T04 Strategic Scarcity | Reuse a retired structural hole | 1 | 2 | 9 | 0 |
+| T05 Recovering a Mistake | Recognize and undo a capacity deadlock | 2 | 4 | 149 | 6 |
 
-- Procedural level generation until authored disassembly rules and solver metrics are stable.
-- Volatile storage holes on falling components.
-- Simultaneous physics simulation as puzzle authority.
-- Daily challenges, meta progression, cosmetic collections, and construction mode.
-- Monetization, ads, IAP, currencies, timers, lives, and paid recovery.
+These figures were produced by exhaustive enumeration in `Tools/DesignVerification/verify_disassembly_design.py`. The complete fixtures and acceptance tests are in `DisassemblyVerticalSliceSpec.md`; executable results are in `Phase21FeasibilityReport.md` and `.json`.
 
-## 6. Player experience loop
+Workshop Latch is retained as a later candidate. Its former three-screw/two-service-hole/no-reuse proposal is not a valid first tutorial and must be redesigned under these rules before production use.
 
-1. Read the assembled object and highlighted tutorial cue when applicable.
-2. Tap an accessible screw; legal destinations illuminate and the selected fastener receives immediate visual/audio feedback.
-3. Tap a destination; the logical transfer commits once.
-4. Watch the screw withdraw, travel, and settle. Newly unsecured components slide, hinge, or fall along authored paths.
-5. Reassess exposed screws and holes. Use undo or restart without penalty when needed.
-6. Clear every required detachable component to complete the level.
+## 7. Player experience
 
-Logical state always precedes animation. Animation may be interrupted and rebuilt from the authoritative snapshot.
+1. The player taps an exposed screw.
+2. The presentation highlights only legal destination holes returned by the engine.
+3. The player taps a destination; the engine validates and commits one atomic transfer.
+4. The engine resolves component release immediately and publishes the new snapshot.
+5. The presentation animates extraction, travel, insertion and deterministic component motion toward that snapshot.
+6. Undo restores the prior snapshot even when animation was interrupted.
+7. The level completes when every required component is logically released. Completion does not wait for animation.
 
-## 7. Progression and difficulty
+## 8. Progression after the introduction
 
-| Band | Learning focus | Typical structure |
-|---|---|---|
-| Introductory | Select, transfer, release, undo | One layer, universal screws, two visible destinations, no dead ends |
-| Developing | Covered screws and newly exposed service holes | Two layers, shallow dependencies, recoverable destination choices |
-| Intermediate | Compatibility and branching | Three or more layers, asymmetric screws, several useful solution paths |
-| Advanced | Coupled structural choices | Deep dependencies, constrained destinations, deliberate recoverable traps, recognizable machines |
+Later authored levels may add deeper overlap, release dependencies, branching capacity choices and recognizable mechanisms. Screw compatibility, optional racks, hinged pieces and efficiency goals require separate approval and solver evidence. Procedural generation remains deferred until authored content establishes reliable difficulty metrics.
 
-Difficulty must be measured with several values rather than screw count alone:
+## 9. Visual quality gate
 
-- legal opening actions and average legal actions per state;
-- dependency and cover depth;
-- number and timing of exposed service holes;
-- screw-to-destination compatibility tightness;
-- shortest solution length and solver states visited;
-- number of distinct useful solution paths;
-- distance from a recoverable mistake to progress;
-- simultaneous visual layers and touch-target separation.
+The current TEMP primitive Android presentation is a preserved functional reference, not the visual target. After one production gameplay slice is verified, the next major milestone must replace visible primitives with original beveled wood components, recognizable mechanically aligned screws, URP Lit materials, differentiated holes, contact shadows, professional lighting, reliable portrait UI and device-tested touch targets. Final artwork is outside Phase 2.1.
 
-No numerical difficulty label is considered accurate until measured from implemented rules and playtests.
+## 10. Approval gate
 
-## 8. Product differentiators
-
-| Rank | Differentiator | Player benefit | Cost | Complexity | Reuse | Launch necessity |
-|---:|---|---|---|---|---|---|
-| 1 | Solver-verified fairness and honest deadlock detection | Trust; no fabricated losses | Medium | High | Very high | Required |
-| 2 | Structural consequences with authored release paths | Every screw action feels meaningful | Medium | Medium | Very high | Required |
-| 3 | Premium mechanical feel: local-axis withdrawal, insertion, wood response | Tactile satisfaction | Medium | Medium | Very high | Required |
-| 4 | Clear shape-based compatibility and accessibility reinforcement | Reduces guessing and color dependence | Low–medium | Medium | High | Required |
-| 5 | Recognizable objects across families | Variety and emotional payoff | High | Medium | High | Required after slice |
-| 6 | Fast portrait UX with no forced interruption | Comfortable short sessions | Medium | Medium | Very high | Required |
-| 7 | Optional efficiency mastery | Replay value without punishment | Low | Low–medium | High | Optional |
-| 8 | Large procedural catalogue | Longevity | High | High | High | Deferred |
-
-Feature count is not a differentiator. The launch slice should prove the first six qualities before adding breadth.
-
-## 9. Visual and audio direction
-
-- Original warm workbench setting with clean depth separation.
-- Real-scale wooden layers with bevels, readable contact shadows, and physically plausible fasteners.
-- Brass and steel variants used for material storytelling rather than color sorting.
-- Compact HUD: level/progress, undo, restart, hint, and pause. No part tray or assembly blueprint in the primary mode.
-- Short extraction, insertion, release, and completion sounds; restrained haptics with a reduced-motion and haptics toggle.
-- Detached components move along authored paths; physics may embellish after state commitment but never decides puzzle outcome.
-
-## 10. Acceptance gate
-
-This design becomes implementation-authorized only after approval of:
-
-1. the controlled-hybrid rule system;
-2. service-hole and rack semantics;
-3. the first vertical-slice level;
-4. the proposed parallel disassembly architecture;
-5. the rule that the part inventory and assembly HUD are dormant in the primary game.
+Production implementation remains blocked until the user approves this exact rule system, the five-level progression, the parallel architecture and the separate disassembly save strategy. Approval does not authorize paid assets, external-generation credits, visual reconstruction or a GitHub push.

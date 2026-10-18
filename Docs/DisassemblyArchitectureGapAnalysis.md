@@ -1,137 +1,122 @@
 # Disassembly Architecture Gap Analysis
 
-Status: **VERIFIED baseline + PROPOSED architecture; no gameplay code changed**
-Date: 2026-10-18
+Status: **PHASE 2.1 SOURCE-VERIFIED DESIGN ANALYSIS — no production implementation**
 
-## 1. Verified baseline
+Reviewed baseline: branch `codex/phase3-functional-stabilization`, commit `e0169a168c3b0e52d0fb3a659bbf8e5b08f5c95e`
 
-- Branch: `codex/phase3-functional-stabilization`.
-- HEAD at analysis start: `e1c9ea79b0417f4a0d82a568fba6450a89bc93b3`.
-- Working tree contained only the preserved untracked Unity `InitTestScene…` scene and `.meta` before this documentation work.
-- Phase 2 baseline `79e79e3`, Phase 1 implementation `44061db`, and evidence `e1c9ea7` exist.
-- Protected `Assets/_Game/Scripts/Runtime/Core/` and `Packages/` have no diff from the Phase 2 baseline.
-- Existing result XML confirms 27/27 EditMode, 16/16 PlayMode, 10/10 post-build regressions, and 1/1 runtime evidence test passed.
-- APK exists at `Builds/Phase2/ScrewAndCreate-Phase2.apk`, 55,766,198 bytes, SHA-256 `31D4EB2CF67D1985D89CBE33691A96A41436A445AAE267A78B1E2382786D4168`.
-- Physical Android verification remains pending.
+Correction branch: `codex/phase2-1-gameplay-reconciliation`
 
-These facts prove the stabilized mixed-workbench prototype. They do not prove the proposed disassembly rules.
+## 1. Source-grounded findings
 
-## 2. Capability matrix
+### `Assets/_Game/Scripts/Runtime/Core/PuzzleModel.cs` — mixed-workbench definitions and snapshots
 
-| Capability | Implemented | Suitable for disassembly | Gap | Recommended action |
-|---|---|---|---|---|
-| Unique IDs and reference validation | Yes, `PuzzleDefinition.Validate()` | Partly | No holes, screw locations, release paths, or disassembly completion validation | **REUSE pattern; EXTEND** in a disassembly model |
-| Screw prerequisites | Yes, `ScrewDefinition.RequiredRemovedScrewIds` | Yes for authored ordering | Models removed/not removed, not transfer destinations | **REUSE concept** |
-| Covered screws | Yes, `CoveringPartIds` and `CanRemoveScrew()` | Yes | Coverage depends on released parts but no general exposed holes | **ADAPT/EXTEND** |
-| Screw removal | Yes, `TryRemoveScrew()` | Partly | Removed screws disappear logically and trigger part tray insertion | **REPLACE in current presentation** with atomic transfer |
-| Screw relocation/hole occupancy | No | Required | No hole model or screw location map | **ADD** |
-| Component fastening/release | Yes, `SecuringScrewIds` and release closure after removal | Partly | Released parts always enter a part tray; no release path/state | **ADAPT** |
-| Structural support graph | Basic explicit securing/dependency graph | Partly | No support modes, deterministic motion path, or stable release ordering | **EXTEND** |
-| Part inventory | Yes, three-slot tray | No for primary mode | Forces reassembly to free capacity | **REMOVE FROM CURRENT PLAYER PRESENTATION; preserve code** |
-| Assembly sockets/rotation | Yes | No for primary mode | Completion depends on all parts assembled | **DORMANT FOR FUTURE** |
-| Completion | Yes | No | `UpdateCompletion()` requires all screws removed and all parts assembled | **ADD disassembly completion predicate** |
-| Undo | Yes, full snapshots | Strong pattern | Snapshot lacks screw-location/hole/component-release state | **REUSE pattern; EXTEND state** |
-| Snapshot validation | Yes | Strong pattern | Current invariant requires every released part in tray or assembled | **ADD disassembly validator** |
-| Solver | Deterministic DFS over removal and assembly | Strong foundation | Successor set and completion are wrong; new state may contain cycles | **ADAPT algorithm; add shortest-path/bounded search as needed** |
-| Hints | First solver action | Strong pattern | Hint cannot describe source/destination transfer | **EXTEND action data** |
-| Deterministic generator | Yes, v2 mixed-loop candidates | Later | Generates one screw per part plus assembly graph; no holes/layers | **DORMANT initially; redesign after authored slice** |
-| PRNG/seed codes | Yes | Yes | Generator/content version must change | **KEEP/REUSE** |
-| Atomic save/migration | Yes | Yes | `GameSaveData` has only `PuzzleSnapshot`; migration needed | **REUSE service; EXTEND schema later** |
-| Input System route | Yes, mouse/touch to explicit layer | Yes | Controller assumes screw removal and part assembly | **KEEP infrastructure; ADAPT commands** |
-| Camera fitting | Yes, essential bounds at four ratios | Yes | Bounds must include service holes and dynamic board, exclude cleared parts | **KEEP/EXTEND** |
-| Safe area | Yes | Yes | Physical cutout verification missing | **KEEP; device verify** |
-| Animation reconciliation | Yes for screw removal and part tray | Yes as pattern | No transfer/insertion or release-path views | **REUSE principle; REPLACE sequences** |
-| HUD/pause/restart/undo/hint | Yes | Mostly | Tray count, rotate, blueprint, and completion copy are construction-specific | **KEEP shell; replace mode-specific elements** |
-| Android portrait/build | Yes | Yes | Device testing absent; package ID still template identity | **KEEP; device verify; identity later** |
+The current model represents screws that are removed, parts that are released into a tray, and parts assembled into target sockets. Its snapshot does not contain a screw-to-hole location map, hole ownership, destination occupancy or retired structural-hole state. Extending it in place would change established construction semantics.
 
-## 3. Source-grounded findings
+### `Assets/_Game/Scripts/Runtime/Core/PuzzleEngine.cs` — `PuzzleEngine`
 
-### Current Core
+The engine is stateful. It owns mutable removed/released/tray/assembled sets, counters, phase and a private `Stack<PuzzleSnapshot>` undo history. `TryRemoveScrew` and `TryAssemblePart` mutate that state after validation. `CaptureSnapshot`, `TryRestoreSnapshot` and `TryUndo` expose controlled state transitions.
 
-- `PuzzleModel.cs`: `PuzzlePhase`, `InteractionMode`, and `PuzzleActionKind` encode mixed disassembly/assembly. `PuzzleSnapshot` stores removed/released/tray/assembled sets, not screw locations.
-- `PuzzleEngine.cs:50–72`: legality checks dependencies, covers, and predicted tray overflow; success marks a screw removed and appends every newly eligible part to the tray.
-- `PuzzleEngine.cs:138–167`: snapshot validation and completion explicitly require every released part to be either in the tray or assembled, and completion requires every part assembled.
-- `PuzzleSolver.cs:41–63`: deterministic DFS enumerates remove then assemble actions. Its visited-key discipline is reusable, but its action graph is not the proposed game.
-- `DeterministicGenerator.cs:82–120`: generation creates one fastener and one assembly socket per part and scores assembly edges/rotations. It must remain dormant until the new authored rules stabilize.
-- `SaveData.cs:27–67`: version-two save can identify the active puzzle and store a snapshot, but a future migration must distinguish mixed-workbench and disassembly snapshot schemas.
+The class therefore cannot accurately be described as a stateless functional engine. It is a stateful transaction owner with serializable snapshots. Its current rules remove screws from play and transfer released parts to a capacity-limited tray, which does not model screw relocation.
 
-### Current presentation
+### `Assets/_Game/Scripts/Runtime/Core/PuzzleSolver.cs` — `PuzzleSolver`
 
-- `WindmillVerticalSliceController.cs` commits logical removal before animation and reconciles from snapshots. This state-first principle should be retained.
-- `ProcessPointerPress()` and `InteractionHits()` already provide UI-aware, explicit-layer mouse/touch selection.
-- `RefreshVisuals()` is coupled to tray and assembly sockets; it cannot simply be relabeled.
-- `PlayfieldFitter.cs` and `SafeAreaFitter.cs` are reusable.
-- `WindmillVerticalSliceBuilder.cs` produces a builder-owned TEMP scene and must not be used to overwrite future authored production scenes.
+The existing solver searches by calling the same current engine operations and uses a canonical `SolverKey`, visited-state pruning and a hard state budget. `SolverResult` exposes `Solved` and `ResourceLimitReached`, so budget exhaustion is distinguishable from the ordinary failure string. It has no cancellation contract and targets the construction state space. The disassembly solver should retain shared transition use while adopting an explicit result enum and cancellation.
 
-## 4. Recommended separation
+### `Assets/_Game/Scripts/Runtime/Core/SaveData.cs` — `GameSaveData` and `AtomicJsonSaveService`
 
-Avoid rewriting the tested mixed-workbench Core in place. After approval, add a parallel disassembly domain:
+The current save schema is version 2, stores a construction `PuzzleSnapshot`, supports v1-to-v2 migration, wraps JSON with CRC32, and falls back to a previous copy. Reinterpreting `ActivePuzzle` as a relocation snapshot would risk old saves and migration behavior. Phase 2.1 makes no change to this file.
+
+### `Assets/_Game/Scripts/Runtime/Presentation/WindmillVerticalSliceController.cs` — current slice controller
+
+The controller presents the preserved Windmill graybox and construction loop. Its interaction and reconciliation work remains useful evidence, but its part tray, socket placement and construction completion are not the primary disassembly game.
+
+### `Assets/_Game/Scripts/Runtime/Presentation/PlayfieldFitter.cs` and `SafeAreaFitter.cs`
+
+These presentation utilities remain reusable for portrait framing and safe-area handling. They must not participate in logical accessibility or legality.
+
+## 2. Decision: parallel stateful disassembly domain
+
+Add a separate pure-C# domain only after approval. Use one consistent architecture:
+
+- `DisassemblyDefinition` is immutable authored data.
+- `DisassemblySnapshot` is a complete serializable value: distinct screw locations, released components, counters, revision and phase.
+- Pure transition helpers derive occupancy, exposure, legal destinations, release closure, completion and canonical keys from definition plus snapshot.
+- `DisassemblySession` owns the current snapshot and undo/redo history, validates commands, calls the pure transition helpers, and publishes committed results.
+- `DisassemblySolver` owns only search-local data and calls the same pure transition function used by `DisassemblySession`.
+- Presentation owns no gameplay state and reconciles views from snapshots.
+
+This keeps mutation and history in one session object while making rule evaluation reproducible and directly shareable by gameplay, solver, tests and hints.
+
+## 3. Proposed data ownership
+
+| Concern | Owner | Serialized |
+|---|---|---:|
+| Components, holes, covers, dependencies, completion targets | `DisassemblyDefinition` | authored asset/data |
+| Screw locations, released set, phase, counters, revision | `DisassemblySnapshot` | yes |
+| Current snapshot and undo/redo stacks | `DisassemblySession` | current snapshot and optional command history |
+| Legality and release closure | pure transition module | no internal state |
+| Search frontier, visited set, limits, cancellation | `DisassemblySolver` | no |
+| Selection, animation, transforms, audio, haptics | presentation controller/views | no |
+
+## 4. Canonicalization and solver requirements
+
+The canonical key must include, in stable ID order:
+
+1. each distinct screw ID and its current hole ID;
+2. the released component bitset or sorted IDs;
+3. any future rule-relevant flags.
+
+Action count, hint count, animation progress, selection and undo depth do not affect future legal moves and stay outside the solver key. Screw IDs may not be collapsed solely because they use the same compatibility group. A symmetry reduction needs a proof that source coverage, structural role, allowed destinations and every future consequence are identical.
+
+Successors are ordered by screw ID then destination ID. The solver returns `ProvenSolution`, `ProvenNoSolution`, `ResourceLimitReached` or `Cancelled`. A no-legal-moves snapshot is recorded as a reachable deadlock candidate; it is not a solver result and says nothing about player undo history.
+
+Small tutorials require exhaustive enumeration. Larger searches require explicit state/time budgets, cancellation and background or incremental execution so Unity’s main thread is not blocked.
+
+## 5. Save strategy
+
+Preserve `GameSaveData` and all existing migrations unchanged during the first production slice. Introduce a separate versioned disassembly envelope, for example:
 
 ```text
-Assets/_Game/Scripts/Runtime/Disassembly/
-  ScrewAndCreate.Disassembly.asmdef
-  DisassemblyModel.cs
-  DisassemblyDefinitionValidator.cs
-  DisassemblyEngine.cs
-  DisassemblySolver.cs
-  DisassemblySnapshot.cs
-  DisassemblySaveAdapter.cs
-
-Assets/_Game/Scripts/Runtime/Presentation/Disassembly/
-  DisassemblyBoardController.cs
-  DisassemblyScrewView.cs
-  FastenerHoleView.cs
-  ComponentView.cs
-  ReleasePathView.cs
-  ScrewRackView.cs
+DisassemblySaveEnvelope v1
+  contentVersion
+  levelId
+  definitionHash
+  currentSnapshot
+  optional moveHistory
+  checksum
 ```
 
-The new runtime assembly may reference `ScrewAndCreate.Core` for stable utilities such as `DeterministicRng`, `SeedCode`, and CRC/save infrastructure where interfaces permit. Existing `PuzzleEngine`, assembly models, controller, scene, and tests remain intact for regression and future construction use.
+Use a separate file or namespaced save key. A future unified profile may reference both construction and disassembly saves only after explicit migration design and regression tests. Do not modify `Assets/_Game/Scripts/Runtime/Core/SaveData.cs` merely to start the slice.
 
-## 5. Future Core changes requiring explicit implementation approval
+## 6. Preserved systems
 
-| Source location | Proposed change | Justification | Regression strategy |
-|---|---|---|---|
-| New `Runtime/Disassembly/` files | Add separate definition, state, engine, validator, solver, and action types | Required rule semantics do not exist; parallel domain avoids destabilizing mixed-workbench logic | New EditMode suites plus all existing 27 Core tests |
-| `SaveData.cs` | Add a versioned disassembly payload or a typed active-mode envelope; increment save version with migration | Current save accepts only `PuzzleSnapshot` | Golden migration, corruption, previous-copy recovery, mixed-save compatibility |
-| `SeedCode.cs` and generator identity only if procedural work begins | Add a disassembly generator/content version | Existing codes describe mixed-workbench generation | Old-code decode tests and new golden round trips |
-| No initial change to `PuzzleEngine.cs` | Preserve existing mixed engine | Construction concept remains valuable and tested | Existing tests must remain byte-for-behavior compatible |
+- `Assets/_Game/Scripts/Runtime/Core/` remains unchanged.
+- The Windmill graybox scene and builder remain a historical, functional reference.
+- Existing construction definitions, solver, tray, sockets, save migration and tests remain available for a later construction game.
+- `PlayfieldFitter`, `SafeAreaFitter`, input-layer discipline, home-pose capture and snapshot reconciliation can be reused at the presentation boundary.
 
-## 6. Presentation disposition
+## 7. Missing production systems
 
-| Existing system | Classification | Disassembly use |
-|---|---|---|
-| `PlayfieldFitter` | KEEP | Fit board, screws, holes, and attached components into the safe play region |
-| `SafeAreaFitter` | KEEP | Preserve portrait cutout/navigation handling |
-| Interaction layer and EventSystem filtering | KEEP | Use for screws and legal destinations |
-| Screw home-pose capture/local-axis animation | REUSE | Extend to extraction, transfer, and insertion |
-| Snapshot reconciliation | KEEP | Rebuild all screw/component views after interruptions |
-| `PartView`/`SocketView` | DORMANT FOR FUTURE | Construction mode only |
-| Three-slot part tray | REMOVE FROM CURRENT PLAYER PRESENTATION | Do not show in primary disassembly HUD |
-| Rotate button/blueprint ghosts | REMOVE FROM CURRENT PLAYER PRESENTATION | Construction-specific |
-| Undo/restart/hint/pause shell | KEEP | Bind to disassembly controller |
-| SAVE/LOAD developer panel | KEEP GATED | Preserve diagnostics outside player HUD |
-| TEMP windmill scene | KEEP AS PRESERVED REFERENCE | Do not overwrite; build a separate disassembly slice scene |
+- Disassembly definition and validator.
+- Screw-location snapshot and canonical key.
+- Pure transfer/release transition module.
+- Stateful session with exact undo.
+- Explicit-outcome solver with cancellation.
+- Separate disassembly save envelope.
+- Data assets for the five tutorials.
+- Disassembly presentation, authoring validator and device tests.
 
-## 7. Missing systems
+## 8. Risk controls
 
-- Screw-location and destination-occupancy model.
-- Structural versus service-hole semantics.
-- Destination compatibility and legal-destination query.
-- Deterministic release-closure engine.
-- Component release-path data and presentation.
-- Disassembly-only completion and deadlock state.
-- Solver successors for screw transfer and cyclic storage moves.
-- Disassembly snapshot validation and save migration.
-- Authoring validator for visual/logical ID parity, layers, covers, paths, and touch bounds.
-- Disassembly-specific HUD and accessibility cues.
-- Device-level touch, safe-area, lifecycle, and performance evidence.
+| Risk | Control |
+|---|---|
+| Construction regression | Parallel assembly; no edits to protected Core; rerun existing Unity tests after integration |
+| Gameplay/solver divergence | One pure transition function used by session, solver, hints and tests |
+| False deadlock on search exhaustion | Explicit solver outcomes; no-move query kept separate |
+| Save corruption | Separate versioned envelope; do not reinterpret construction snapshots |
+| Visual state changing legality | Logical coverage only; presentation reconciles after commit |
+| Main-thread stalls | Exhaustive search only for small fixtures; limits, cancellation and worker/incremental search for larger levels |
 
-## 8. Quality gates
+## 9. Verification boundary
 
-1. No modification to protected Core or presentation until the design approval gate is recorded.
-2. Test the new domain independently before scene integration.
-3. Use the same engine operation in gameplay, solver, hints, and validation.
-4. Run all existing 27 EditMode and 16 PlayMode tests after each integration milestone.
-5. Preserve the current scene and add a new scene with a distinct path and IDs.
-6. Require solver proof, PlayMode pointer tests, four-ratio layout tests, interruption reconciliation, and a development APK before accepting the slice.
+Phase 2.1 changed documentation and an isolated Python verifier only. No Unity runtime, scene, save or Core file was changed. Existing Unity tests were not made unnecessary; they must be rerun when the approved production domain is added.

@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "max_states": 100000,
+  "levels": [
+    {
+      "id": "T01",
+      "category": "tutorial",
+      "outcome": "PROVEN_SOLUTION",
+      "reachable_states": 2,
+      "reachable_deadlocks": 0,
+      "minimum_solution_length": 1,
+      "exhaustive": true,
+      "solution": [
+        {
+          "screw": "S_1",
+          "from": "H_C1",
+          "to": "H_P1"
+        }
+      ],
+      "deadlock_examples": [],
+      "capacity_trace": [
+        {
+          "step": 1,
+          "move": {
+            "screw": "S_1",
+            "from": "H_C1",
+            "to": "H_P1"
+          },
+          "capacity_before": 1,
+          "capacity_after": 1,
+          "released": [
+            "C_PLANK"
+          ],
+          "newly_legal_empty_holes": [
+            "H_C1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "category": "tutorial",
+      "outcome": "PROVEN_SOLUTION",
+      "reachable_states": 7,
+      "reachable_deadlocks": 0,
+      "minimum_solution_length": 2,
+      "exhaustive": true,
+      "solution": [
+        {
+          "screw": "S_1",
+          "from": "H_C1",
+          "to": "H_P1"
+        },
+        {
+          "screw": "S_2",
+          "from": "H_C2",
+          "to": "H_P2"
+        }
+      ],
+      "deadlock_examples": [],
+      "capacity_trace": [
+        {
+          "step": 1,
+          "move": {
+            "screw": "S_1",
+            "from": "H_C1",
+            "to": "H_P1"
+          },
+          "capacity_before": 2,
+          "capacity_after": 1,
+          "released": [],
+          "newly_legal_empty_holes": []
+        },
+        {
+          "step": 2,
+          "move": {
+            "screw": "S_2",
+            "from": "H_C2",
+            "to": "H_P2"
+          },
+          "capacity_before": 1,
+          "capacity_after": 2,
+          "released": [
+            "C_PLANK"
+          ],
+          "newly_legal_empty_holes": [
+            "H_C1",
+            "H_C2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "category": "tutorial",
+      "outcome": "PROVEN_SOLUTION",
+      "reachable_states": 10,
+      "reachable_deadlocks": 0,
+      "minimum_solution_length": 2,
+      "exhaustive": true,
+      "solution": [
+        {
+          "screw": "S_TOP",
+          "from": "H_TOP",
+          "to": "H_P1"
+        },
+        {
+          "screw": "S_BOTTOM",
+          "from": "H_BOTTOM",
+          "to": "H_P2"
+        }
+      ],
+      "deadlock_examples": [],
+      "capacity_trace": [
+        {
+          "step": 1,
+          "move": {
+            "screw": "S_TOP",
+            "from": "H_TOP",
+            "to": "H_P1"
+          },
+          "capacity_before": 1,
+          "capacity_after": 2,
+          "released": [
+            "C_TOP"
+          ],
+          "newly_legal_empty_holes": [
+            "H_P2",
+            "H_TOP"
+          ]
+        },
+        {
+          "step": 2,
+          "move": {
+            "screw": "S_BOTTOM",
+            "from": "H_BOTTOM",
+            "to": "H_P2"
+          },
+          "capacity_before": 2,
+          "capacity_after": 2,
+          "released": [
+            "C_BOTTOM"
+          ],
+          "newly_legal_empty_holes": [
+            "H_BOTTOM"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "category": "tutorial",
+      "outcome": "PROVEN_SOLUTION",
+      "reachable_states": 9,
+      "reachable_deadlocks": 0,
+      "minimum_solution_length": 2,
+      "exhaustive": true,
+      "solution": [
+        {
+          "screw": "S_LEFT",
+          "from": "H_LEFT",
+          "to": "H_P1"
+        },
+        {
+          "screw": "S_RIGHT",
+          "from": "H_RIGHT",
+          "to": "H_LEFT"
+        }
+      ],
+      "deadlock_examples": [],
+      "capacity_trace": [
+        {
+          "step": 1,
+          "move": {
+            "screw": "S_LEFT",
+            "from": "H_LEFT",
+            "to": "H_P1"
+          },
+          "capacity_before": 1,
+          "capacity_after": 1,
+          "released": [
+            "C_LEFT"
+          ],
+          "newly_legal_empty_holes": [
+            "H_LEFT"
+          ]
+        },
+        {
+          "step": 2,
+          "move": {
+            "screw": "S_RIGHT",
+            "from": "H_RIGHT",
+            "to": "H_LEFT"
+          },
+          "capacity_before": 1,
+          "capacity_after": 1,
+          "released": [
+            "C_RIGHT"
+          ],
+          "newly_legal_empty_holes": [
+            "H_RIGHT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "category": "tutorial",
+      "outcome": "PROVEN_SOLUTION",
+      "reachable_states": 149,
+      "reachable_deadlocks": 6,
+      "minimum_solution_length": 4,
+      "exhaustive": true,
+      "solution": [
+        {
+          "screw": "S_KEY",
+          "from": "H_KEY",
+          "to": "H_P1"
+        },
+        {
+          "screw": "S_T1",
+          "from": "H_T1",
+          "to": "H_KEY"
+        },
+        {
+          "screw": "S_T2",
+          "from": "H_T2",
+          "to": "H_P2"
+        },
+        {
+          "screw": "S_T3",
+          "from": "H_T3",
+          "to": "H_P3"
+        }
+      ],
+      "deadlock_examples": [
+        [
+          {
+            "screw": "S_T1",
+            "from": "H_T1",
+            "to": "H_P1"
+          },
+          {
+            "screw": "S_T2",
+            "from": "H_T2",
+            "to": "H_P2"
+          }
+        ],
+        [
+          {
+            "screw": "S_T1",
+            "from": "H_T1",
+            "to": "H_P1"
+          },
+          {
+            "screw": "S_T3",
+            "from": "H_T3",
+            "to": "H_P2"
+          }
+        ],
+        [
+          {
+            "screw": "S_T1",
+            "from": "H_T1",
+            "to": "H_P2"
+          },
+          {
+            "screw": "S_T2",
+            "from": "H_T2",
+            "to": "H_P1"
+          }
+        ]
+      ],
+      "capacity_trace": [
+        {
+          "step": 1,
+          "move": {
+            "screw": "S_KEY",
+            "from": "H_KEY",
+            "to": "H_P1"
+          },
+          "capacity_before": 2,
+          "capacity_after": 3,
+          "released": [
+            "C_KEY"
+          ],
+          "newly_legal_empty_holes": [
+            "H_KEY",
+            "H_P3"
+          ]
+        },
+        {
+          "step": 2,
+          "move": {
+            "screw": "S_T1",
+            "from": "H_T1",
+            "to": "H_KEY"
+          },
+          "capacity_before": 3,
+          "capacity_after": 2,
+          "released": [],
+          "newly_legal_empty_holes": []
+        },
+        {
+          "step": 3,
+          "move": {
+            "screw": "S_T2",
+            "from": "H_T2",
+            "to": "H_P2"
+          },
+          "capacity_before": 2,
+          "capacity_after": 1,
+          "released": [],
+          "newly_legal_empty_holes": []
+        },
+        {
+          "step": 4,
+          "move": {
+            "screw": "S_T3",
+            "from": "H_T3",
+            "to": "H_P3"
+          },
+          "capacity_before": 1,
+          "capacity_after": 3,
+          "released": [
+            "C_TRIPLE"
+          ],
+          "newly_legal_empty_holes": [
+            "H_T1",
+            "H_T2",
+            "H_T3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "NC01",
+      "category": "negative_control",
+      "outcome": "PROVEN_NO_SOLUTION",
+      "reachable_states": 13,
+      "reachable_deadlocks": 6,
+      "minimum_solution_length": null,
+      "exhaustive": true,
+      "solution": [],
+      "deadlock_examples": [
+        [
+          {
+            "screw": "S_1",
+            "from": "H_C1",
+            "to": "H_P1"
+          },
+          {
+            "screw": "S_2",
+            "from": "H_C2",
+            "to": "H_P2"
+          }
+        ],
+        [
+          {
+            "screw": "S_1",
+            "from": "H_C1",
+            "to": "H_P1"
+          },
+          {
+            "screw": "S_3",
+            "from": "H_C3",
+            "to": "H_P2"
+          }
+        ],
+        [
+          {
+            "screw": "S_1",
+            "from": "H_C1",
+            "to": "H_P2"
+          },
+          {
+            "screw": "S_2",
+            "from": "H_C2",
+            "to": "H_P1"
+          }
+        ]
+      ],
+      "capacity_trace": []
+    }
+  ]
+}
