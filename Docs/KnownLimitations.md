@@ -1,9 +1,16 @@
 # Known Limitations
 
-- The project currently contains the deterministic logic foundation and documentation, not a playable production scene.
-- Android Build Support, SDK/NDK Tools, and OpenJDK are not installed for Unity 6000.6.6f1.
-- The first TEMP_ graybox scene and the first finished-level visual approval gate have not been reached.
-- No production art, audio, advertising SDK, publisher identity, privacy URL, package identity, or signing material has been added.
-- Compatibility groups exist in the data model but need explicit socket-catalog enforcement before REQ-GAME-008 can be verified.
-- Hint presentation, restart/pause/settings controls, and visual-state restoration are pending even though deterministic solver and logical undo foundations exist.
-- The full 10,000-seed release report, Play Mode suite, Android lifecycle checks, and real-device performance measurements remain pending.
+Current as of 2026-10-18.
+
+- The playable scene is a stabilized TEMP mixed-workbench graybox, not the newly specified disassembly game.
+- Controlled-hybrid disassembly rules, screw destinations, service holes, rack state, structural release closure, disassembly completion, and deadlock proof are specifications only.
+- The proposed Workshop Latch level is hand-validated against the written rules and has not been implemented or solver-verified.
+- The existing deterministic generator and solver target mixed removal/assembly and must not be presented as disassembly evidence.
+- Android Build Support, SDK/NDK, and OpenJDK are installed and can build the development APK, but no physical Android device has been tested.
+- Production publisher/package identity, signing, current store requirements, and release AAB remain gated.
+- The current TEMP scene uses primitive geometry and Unlit materials; production meshes, Lit materials, final UI, audio, and haptics remain pending.
+- No production assets have been downloaded or imported. Free candidates still require exact per-asset approval and recorded license evidence.
+- The part inventory and assembly presentation remain in the preserved prototype but are planned to be dormant in the primary disassembly game.
+- Procedural disassembly generation remains deferred until an authored vertical slice and its solver are approved and verified.
+- Two Unity `InitTestScene…` files remain untracked and preserved pending explicit treatment.
+- External-generation spend remains zero.

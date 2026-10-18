@@ -1,5 +1,7 @@
 # Seeded Generator Design
 
+> This document describes the preserved mixed removal/assembly generator. It is dormant for the primary disassembly game until the authored disassembly rule set and solver are implemented and approved. It must not be treated as proof that disassembly levels are generated or solvable.
+
 ## Stable identity
 
 A challenge identity contains generator version, content catalog version, unsigned 64-bit seed, construction family, and difficulty band. The share code includes these fields and a checksum.

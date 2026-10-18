@@ -1,5 +1,7 @@
 # Phase 2 Review Log
 
+> Historical record of the earlier mixed-workbench Phase 2. Its product direction and Android-toolchain observations are superseded by the 2026-10-18 disassembly specification and verified Phase 1 evidence. Preserve this log as provenance; do not use it as the current implementation plan.
+
 Date: 2026-10-18 (Asia/Dubai)  
 Base commit: `b42222d58bfd2989373bcd67285c166c28a9056b`  
 Working branch: `codex/phase2-playable-windmill`

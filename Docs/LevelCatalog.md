@@ -1,5 +1,7 @@
 # Level Catalog
 
+> Historical construction-oriented catalogue. The authoritative primary direction is now object disassembly. These rows are preserved for possible future construction use and are not approved disassembly levels. See `DisassemblyGameDesign.md` and `DisassemblyVerticalSliceSpec.md`.
+
 The 15 authored levels are planned here before asset production. Solver/playtest/approval fields remain Pending until evidence exists.
 
 | Level ID | Family | Stage | Learning goal | Duration | Complexity inputs | Asset dependencies | Solver | Playtest | Approval |

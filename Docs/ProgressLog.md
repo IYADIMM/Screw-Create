@@ -34,3 +34,14 @@
 - Scope/credits: protected Core and package manifests are unchanged; no production art, external generation, paid assets, monetization, or remote push; spend remains zero.
 - Exact next action: connect a representative Android phone and run the device-only Phase 1 checks before beginning the separately approved reconstruction phase.
 
+## 2026-10-18 — Phase 2 disassembly specification checkpoint
+
+- Product correction: primary gameplay is now assembled puzzle → strategic screw actions → component release → structural disassembly → completion. Mandatory rebuilding is removed from the current product direction.
+- Verified baseline: branch/HEAD, backup hash, Phase 1 XML results, APK hash, protected Core diff, and preserved graybox were checked without repeating Phase 1.
+- Recommendation: controlled hybrid disassembly using atomic transfers from accessible structural screws to compatible persistent service holes or a small rack, followed by deterministic release closure.
+- Architecture: keep the tested mixed engine and construction presentation intact; propose a parallel disassembly domain, separate scene, versioned snapshot/save payload, solver, and controller.
+- First slice: `DS-INTRO-01 Workshop Latch`, hand-validated against the written specification and explicitly pending implementation/solver proof.
+- Assets: plan-only CC0 candidates and in-house Blender kit; no downloads, imports, paid assets, or external generation.
+- Android: existing Phase 1 APK/hash reconfirmed; physical device verification remains pending.
+- Stop gate: no disassembly code or scene work begins until the rule system, slice, and architecture are reviewed and approved.
+
