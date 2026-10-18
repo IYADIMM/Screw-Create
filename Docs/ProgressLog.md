@@ -14,3 +14,13 @@
 - Paid actions pending: none proposed; external-generation spend is zero.
 - Exact next action: implement explicit compatibility/socket catalog rules and rejection reasons, extend generator regression coverage, then create the first TEMP_ graybox vertical-slice scene without paid assets.
 
+## 2026-10-18 — Phase 2 playable Windmill checkpoint
+
+- Current milestone: zero-credit Windmill vertical slice implemented on `codex/phase2-playable-windmill`; user visual review is the next gate.
+- Core: mixed remove/assemble loop, three-slot interleaving, compatibility/socket rules, validated snapshots, exact undo, solver hints, save migration/integrity/fallback, generator v2, and catalog-aware seed codes implemented.
+- Scene: `Gameplay_Windmill_Graybox.unity` generated with explicit composition roots, TEMP_ procedural windmill/workshop, portrait HUD, Input System mouse/touch path, drag/rotate/snap, controls, local save, particles, and completion motion.
+- Verification: EditMode 27/27; PlayMode 5/5; 1,000/1,000 seeds accepted and reproducible; strict verification 198 files with zero findings; screenshots captured at three portrait dimensions.
+- Blocked: Android module/toolchain remains uninstalled, so Android build and device evidence are blocked.
+- Paid actions: none; CreditLedger total remains zero.
+- Exact next action: obtain the user's visual-direction review, address requested presentation changes, then install/verify Android modules at the focused manual checkpoint before an APK build.
+

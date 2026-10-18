@@ -1,0 +1,14 @@
+{
+  "name": "ScrewAndCreate.Presentation",
+  "rootNamespace": "ScrewAndCreate.Presentation",
+  "references": ["ScrewAndCreate.Core", "Unity.InputSystem", "Unity.UGUI"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

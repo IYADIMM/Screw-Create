@@ -39,5 +39,19 @@ namespace ScrewAndCreate.Core.Tests
             Assert.That(a.Verification.Solved, Is.True);
             Assert.That(b.Verification.Actions, Has.Length.EqualTo(a.Verification.Actions.Length));
         }
+
+        [Test]
+        public void VersionTwoSeedCodeCarriesCatalogAndRejectsUnsupportedVersion()
+        {
+            var catalog = SeedCode.CatalogHashFor(DeterministicGenerator.ContentCatalogId);
+            var code = SeedCode.Encode(new SeedIdentity(2, ulong.MaxValue, CreationFamily.WoodlandBridge, DifficultyBand.Master, catalog));
+            Assert.That(SeedCode.TryDecode(code, out var decoded), Is.True);
+            Assert.That(decoded.CatalogHash, Is.EqualTo(catalog));
+            var futurePayload = "SC-99-0000000000000001-0-0-00000001";
+            var future = $"{futurePayload}-{Crc32.Compute(System.Text.Encoding.ASCII.GetBytes(futurePayload)):X8}";
+            Assert.That(SeedCode.TryDecode(future, out _), Is.False);
+            Assert.That(SeedCode.TryDecode(code.Substring(0, code.Length - 3), out _), Is.False);
+            Assert.That(SeedCode.TryDecode("SC-2-NOTHEX-0-0-00000001-00000000", out _), Is.False);
+        }
     }
 }

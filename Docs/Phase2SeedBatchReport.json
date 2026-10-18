@@ -1,0 +1,14 @@
+{
+    "GeneratedUtc": "2026-10-18T08:02:16.5442568Z",
+    "GeneratorVersion": 2,
+    "ContentCatalogId": "local-v2",
+    "Requested": 1000,
+    "Accepted": 1000,
+    "Rejected": 0,
+    "Failures": 0,
+    "AverageSolverStates": 8.84,
+    "MaximumSolverStates": 14,
+    "ReproducibilityFailures": 0,
+    "RejectionReasons": [],
+    "Coverage": "All three creation families and all five difficulty bands"
+}

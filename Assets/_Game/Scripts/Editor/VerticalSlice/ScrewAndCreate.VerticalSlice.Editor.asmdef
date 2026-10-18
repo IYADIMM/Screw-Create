@@ -1,0 +1,14 @@
+{
+  "name": "ScrewAndCreate.VerticalSlice.Editor",
+  "rootNamespace": "ScrewAndCreate.Editor.VerticalSlice",
+  "references": ["ScrewAndCreate.Core", "ScrewAndCreate.Presentation", "Unity.InputSystem", "Unity.UGUI"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

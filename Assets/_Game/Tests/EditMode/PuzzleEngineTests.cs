@@ -67,6 +67,11 @@ namespace ScrewAndCreate.Core.Tests
             {
                 new PartDefinition { Id = "P1", CompatibilityGroup = "wood", TargetSocketId = "Socket-P1", SecuringScrewIds = new[] { "S1" }, AllowedRotations = new[] { 0 } },
                 new PartDefinition { Id = "P2", CompatibilityGroup = "wood", TargetSocketId = "Socket-P2", SecuringScrewIds = new[] { "S2" }, AssemblyDependencyPartIds = new[] { "P1" }, AllowedRotations = new[] { 90 } }
+            },
+            Sockets = new[]
+            {
+                new SocketDefinition { Id = "Socket-P1", VisualTargetId = "Ghost-P1", AcceptedCompatibilityGroups = new[] { "wood" }, AllowedPartIds = new[] { "P1" }, AllowedRotations = new[] { 0 } },
+                new SocketDefinition { Id = "Socket-P2", VisualTargetId = "Ghost-P2", AcceptedCompatibilityGroups = new[] { "wood" }, AllowedPartIds = new[] { "P2" }, AssemblyDependencyPartIds = new[] { "P1" }, AllowedRotations = new[] { 90 } }
             }
         };
     }
