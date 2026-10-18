@@ -24,3 +24,13 @@
 - Paid actions: none; CreditLedger total remains zero.
 - Exact next action: obtain the user's visual-direction review, address requested presentation changes, then install/verify Android modules at the focused manual checkpoint before an APK build.
 
+## 2026-10-18 — Phase 1 functional stabilization checkpoint
+
+- Source protection: verified external ZIP backup, committed recoverable Phase 2 baseline `79e79e3`, and repaired on `codex/phase3-functional-stabilization` without pushing.
+- Functional repair: preserved authored screw poses and local-axis motion; made recovered parts visible/selectable by actual tray index; separated interactive physics/UI layers; added responsive essential-bounds fitting; enforced portrait; gated developer controls; committed state before animation and reconciled presentation after lifecycle interruptions.
+- Verification: pre-fix focused run failed 6/6 as expected; final EditMode passed 27/27; full PlayMode passed 16/16; exact post-build focused suite passed 10/10; five Editor PlayMode screenshots were visually reviewed.
+- Android: development APK build succeeded, 55,766,198 bytes, SHA-256 `31D4EB2CF67D1985D89CBE33691A96A41436A445AAE267A78B1E2382786D4168`.
+- Blocked: ADB reported no connected device, so physical install, real touch, lifecycle, cutout, and performance checks remain pending.
+- Scope/credits: protected Core and package manifests are unchanged; no production art, external generation, paid assets, monetization, or remote push; spend remains zero.
+- Exact next action: connect a representative Android phone and run the device-only Phase 1 checks before beginning the separately approved reconstruction phase.
+

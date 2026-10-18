@@ -39,7 +39,7 @@ Known visual gaps: primitive geometry lacks the reference's final bevel quality,
 
 ## Android status
 
-Android Build Support, Android SDK/NDK Tools, and OpenJDK remain available but uninstalled for Unity 6000.6.6f1. No Android compile, APK/AAB, install, lifecycle, performance, or device result is claimed.
+Superseded by the Phase 1 stabilization evidence: Android Build Support, SDK/NDK Tools, and OpenJDK are installed for Unity 6000.6.6f1. A development APK compiled successfully at `Builds/Phase2/ScrewAndCreate-Phase2.apk` (55,766,198 bytes; SHA-256 `31D4EB2CF67D1985D89CBE33691A96A41436A445AAE267A78B1E2382786D4168`). No Android device was connected, so install, real touch, lifecycle, cutout, and performance results remain unverified. See `Phase1VerificationReport.md`.
 
 ## How to open and play
 

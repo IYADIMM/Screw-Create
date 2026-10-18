@@ -6,7 +6,7 @@
 - Unity CLI: 1.0.0-beta.13.
 - Installed template: `com.unity.template.urp-blank` 17.2.6.
 - Input System in template: 1.20.0; URP: 17.6.0; uGUI: 2.6.0.
-- Android Build Support, SDK/NDK Tools, and OpenJDK: not installed.
+- Android Build Support, SDK/NDK Tools, and OpenJDK: installed under the Unity 6000.6.6f1 editor and used successfully on 2026-10-18.
 - Blender: 5.2.2 LTS.
 - Git: 2.56.0.windows.2.
 - Free disk at preflight: 15.64 GB.
@@ -32,4 +32,16 @@ Minimum API, current Google Play target API, final package/publisher identity, p
 | Installed application | <= 250 MB initial target |
 
 These are planning targets, not measured results.
+
+## Phase 1 Android development build — 2026-10-18
+
+- Build method: `ScrewAndCreate.Editor.VerticalSlice.WindmillVerticalSliceBuilder.BuildAndroidDevelopmentFromCommandLine`.
+- Result: Succeeded.
+- Artifact: `Builds/Phase2/ScrewAndCreate-Phase2.apk`.
+- Actual file size: 55,766,198 bytes.
+- SHA-256: `31D4EB2CF67D1985D89CBE33691A96A41436A445AAE267A78B1E2382786D4168`.
+- Log: `Logs/Phase1AndroidBuild.log` (local generated evidence; not committed).
+- Serialized orientation: portrait default; upside-down and both landscape autorotation options disabled.
+- Device status: `adb devices` returned no connected device. Installation, physical touch, lifecycle, cutout/navigation-inset behavior, and performance remain blocked.
+- This is a development APK. Production identity, signing, current store/API requirements, release AAB, and privacy decisions remain gated.
 
