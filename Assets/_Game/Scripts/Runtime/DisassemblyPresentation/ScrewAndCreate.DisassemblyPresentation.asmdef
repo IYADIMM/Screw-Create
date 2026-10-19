@@ -1,0 +1,18 @@
+{
+  "name": "ScrewAndCreate.DisassemblyPresentation",
+  "rootNamespace": "ScrewAndCreate.DisassemblyPresentation",
+  "references": [
+    "ScrewAndCreate.Disassembly",
+    "Unity.InputSystem",
+    "Unity.UGUI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

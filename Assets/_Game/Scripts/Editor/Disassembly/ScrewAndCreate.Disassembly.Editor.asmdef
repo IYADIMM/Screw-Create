@@ -1,0 +1,19 @@
+{
+  "name": "ScrewAndCreate.Disassembly.Editor",
+  "rootNamespace": "ScrewAndCreate.Editor.Disassembly",
+  "references": [
+    "ScrewAndCreate.Disassembly",
+    "ScrewAndCreate.DisassemblyPresentation",
+    "Unity.InputSystem",
+    "Unity.UGUI"
+  ],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
