@@ -1,7 +1,7 @@
 {
   "name": "ScrewAndCreate.PlayMode.Tests",
   "rootNamespace": "ScrewAndCreate.PlayMode.Tests",
-  "references": ["ScrewAndCreate.Core", "ScrewAndCreate.Presentation", "Unity.InputSystem", "Unity.UGUI", "UnityEngine.TestRunner"],
+  "references": ["ScrewAndCreate.Core", "ScrewAndCreate.Presentation", "ScrewAndCreate.Disassembly", "ScrewAndCreate.DisassemblyPresentation", "Unity.InputSystem", "Unity.UGUI", "UnityEngine.TestRunner"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

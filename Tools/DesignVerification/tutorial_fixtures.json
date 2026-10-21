@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "ruleset": "phase-2.1-baseboard-relocation-v1",
+  "levels": [
+    {
+      "id": "T01",
+      "title": "First Release",
+      "concept": "Move one accessible screw to one persistent baseboard parking hole and observe immediate logical release.",
+      "components": [
+        {"id": "C_PLANK", "secured_by": ["H_C1"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_C1", "owner": "baseboard", "role": "structural", "secures": "C_PLANK", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []}
+      ],
+      "screws": [
+        {"id": "S_1", "hole": "H_C1"}
+      ],
+      "expected": {"outcome": "PROVEN_SOLUTION", "reachable_states": 2, "reachable_deadlocks": 0, "minimum_solution_length": 1}
+    },
+    {
+      "id": "T02",
+      "title": "Multiple Fasteners",
+      "concept": "A component remains attached until both of its structural holes are empty.",
+      "components": [
+        {"id": "C_PLANK", "secured_by": ["H_C1", "H_C2"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_C1", "owner": "baseboard", "role": "structural", "secures": "C_PLANK", "covered_by": []},
+        {"id": "H_C2", "owner": "baseboard", "role": "structural", "secures": "C_PLANK", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []},
+        {"id": "H_P2", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []}
+      ],
+      "screws": [
+        {"id": "S_1", "hole": "H_C1"},
+        {"id": "S_2", "hole": "H_C2"}
+      ],
+      "expected": {"outcome": "PROVEN_SOLUTION", "reachable_states": 7, "reachable_deadlocks": 0, "minimum_solution_length": 2}
+    },
+    {
+      "id": "T03",
+      "title": "Overlapping Components",
+      "concept": "Release the top plank to expose the lower screw and an additional parking hole.",
+      "components": [
+        {"id": "C_BOTTOM", "secured_by": ["H_BOTTOM"], "release_requires": []},
+        {"id": "C_TOP", "secured_by": ["H_TOP"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_BOTTOM", "owner": "baseboard", "role": "structural", "secures": "C_BOTTOM", "covered_by": ["C_TOP"]},
+        {"id": "H_TOP", "owner": "baseboard", "role": "structural", "secures": "C_TOP", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []},
+        {"id": "H_P2", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": ["C_TOP"]}
+      ],
+      "screws": [
+        {"id": "S_BOTTOM", "hole": "H_BOTTOM"},
+        {"id": "S_TOP", "hole": "H_TOP"}
+      ],
+      "expected": {"outcome": "PROVEN_SOLUTION", "reachable_states": 10, "reachable_deadlocks": 0, "minimum_solution_length": 2}
+    },
+    {
+      "id": "T04",
+      "title": "Strategic Scarcity",
+      "concept": "One initially available parking hole is reused through retired persistent structural holes.",
+      "components": [
+        {"id": "C_LEFT", "secured_by": ["H_LEFT"], "release_requires": []},
+        {"id": "C_RIGHT", "secured_by": ["H_RIGHT"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_LEFT", "owner": "baseboard", "role": "structural", "secures": "C_LEFT", "covered_by": []},
+        {"id": "H_RIGHT", "owner": "baseboard", "role": "structural", "secures": "C_RIGHT", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []}
+      ],
+      "screws": [
+        {"id": "S_LEFT", "hole": "H_LEFT"},
+        {"id": "S_RIGHT", "hole": "H_RIGHT"}
+      ],
+      "expected": {"outcome": "PROVEN_SOLUTION", "reachable_states": 9, "reachable_deadlocks": 0, "minimum_solution_length": 2}
+    },
+    {
+      "id": "T05",
+      "title": "Recovering a Mistake",
+      "concept": "A tempting partial removal consumes all visible capacity; undo restores a state from which the key plank can expose enough capacity.",
+      "components": [
+        {"id": "C_KEY", "secured_by": ["H_KEY"], "release_requires": []},
+        {"id": "C_TRIPLE", "secured_by": ["H_T1", "H_T2", "H_T3"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_KEY", "owner": "baseboard", "role": "structural", "secures": "C_KEY", "covered_by": []},
+        {"id": "H_T1", "owner": "baseboard", "role": "structural", "secures": "C_TRIPLE", "covered_by": []},
+        {"id": "H_T2", "owner": "baseboard", "role": "structural", "secures": "C_TRIPLE", "covered_by": []},
+        {"id": "H_T3", "owner": "baseboard", "role": "structural", "secures": "C_TRIPLE", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []},
+        {"id": "H_P2", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []},
+        {"id": "H_P3", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": ["C_KEY"]}
+      ],
+      "screws": [
+        {"id": "S_KEY", "hole": "H_KEY"},
+        {"id": "S_T1", "hole": "H_T1"},
+        {"id": "S_T2", "hole": "H_T2"},
+        {"id": "S_T3", "hole": "H_T3"}
+      ],
+      "expected": {"outcome": "PROVEN_SOLUTION", "reachable_states": 149, "reachable_deadlocks": 6, "minimum_solution_length": 4}
+    }
+  ],
+  "negative_controls": [
+    {
+      "id": "NC01",
+      "title": "Three Transfers Into Two Fixed Holes",
+      "concept": "Prove the storage-capacity contradiction when three fasteners must move before release but only two persistent parking holes exist.",
+      "components": [
+        {"id": "C_THREE", "secured_by": ["H_C1", "H_C2", "H_C3"], "release_requires": []}
+      ],
+      "holes": [
+        {"id": "H_C1", "owner": "baseboard", "role": "structural", "secures": "C_THREE", "covered_by": []},
+        {"id": "H_C2", "owner": "baseboard", "role": "structural", "secures": "C_THREE", "covered_by": []},
+        {"id": "H_C3", "owner": "baseboard", "role": "structural", "secures": "C_THREE", "covered_by": []},
+        {"id": "H_P1", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []},
+        {"id": "H_P2", "owner": "baseboard", "role": "parking", "secures": null, "covered_by": []}
+      ],
+      "screws": [
+        {"id": "S_1", "hole": "H_C1"},
+        {"id": "S_2", "hole": "H_C2"},
+        {"id": "S_3", "hole": "H_C3"}
+      ],
+      "expected": {"outcome": "PROVEN_NO_SOLUTION", "reachable_states": 13, "reachable_deadlocks": 6, "minimum_solution_length": null}
+    }
+  ]
+}

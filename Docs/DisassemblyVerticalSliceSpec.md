@@ -1,165 +1,219 @@
-# First Disassembly Vertical Slice — Workshop Latch
+# First Five Disassembly Tutorials
 
-Status: **PROPOSED, hand-validated against the specification; not implemented or solver-verified**
-Level ID: `DS-INTRO-01`
-Goal: prove screw transfer, covered fastener exposure, deterministic component release, undo/restart, hints, save/resume, and portrait interaction.
+Status: **PHASE 2.1 EXECUTABLY VERIFIED DESIGN FIXTURES — not production-ready**
 
-## 1. Why this level
+Canonical fixture data: `Tools/DesignVerification/tutorial_fixtures.json`
 
-Workshop Latch is deliberately smaller than the existing windmill. Three layered wooden components and three screws isolate the new rules without production-art complexity. The geometry can be authored from simple beveled boards while still reading as a real latch assembly.
+Rule set: `phase-2.1-baseboard-relocation-v1`
 
-## 2. Board contents
+## 1. Shared fixture rules
 
-### Persistent base
+- Every listed hole is owned by the persistent baseboard; no tutorial uses a component-owned destination.
+- `H_P*` holes are dedicated parking holes.
+- `H_*` structural holes secure their declared component while it remains attached and reject incoming screws.
+- When a component releases, its empty persistent structural holes become retired legal parking holes.
+- A `covered_by` component blocks both the hole and any screw occupying it until that component releases.
+- All screws are universally compatible.
+- Completion means every listed component is released.
+- Completed states are terminal for enumeration.
+- Parked screws may be moved to other legal holes.
+- Undo is player history and is not part of the canonical solver state.
 
-| ID | Type | Description |
-|---|---|---|
-| `BASE-01` | Baseboard | Does not detach; owns all service holes |
-| `H-SVC-A` | Standard service hole | Exposed initially; accepts standard screws |
-| `H-SVC-B` | Universal service hole | Covered initially by `C-SIDE`; exposed when `C-SIDE` releases |
-| `R-01` | Universal rack slot | Persistent workbench slot, exposed initially |
+## 2. T01 — First Release
 
-### Components
+**New concept:** select one screw, move it to one suitable empty destination, and observe release.
 
-| ID | Type/layer | Secured by | Covers | Release dependencies | Release path | Required |
-|---|---|---|---|---|---|---|
-| `C-TOP` | Top wooden brace, front layer | `H-FAST-1` | `S-CORE` | none | `SlideLeft` | yes |
-| `C-SIDE` | Side latch, front layer | `H-FAST-2` | `H-SVC-B` | none | `Drop` | yes |
-| `C-CORE` | Central panel, rear layer | `H-FAST-3` | none | `C-TOP` released | `SlideRight` | yes |
+### Initial state
 
-### Structural holes and screws
+| Item | Type/owner | Initial occupancy or state | Coverage/effect |
+|---|---|---|---|
+| `C_PLANK` | detachable component | attached | secured by `H_C1` |
+| `H_C1` | baseboard structural | `S_1` | secures `C_PLANK`; exposed |
+| `H_P1` | baseboard parking | empty | exposed |
 
-| Hole | Initial screw | Screw compatibility | Structural effect | Initial exposure |
-|---|---|---|---|---|
-| `H-FAST-1` | `S-TOP` | standard | Secures `C-TOP` | exposed |
-| `H-FAST-2` | `S-SIDE` | broad | Secures `C-SIDE` | exposed |
-| `H-FAST-3` | `S-CORE` | standard | Secures `C-CORE` | covered by `C-TOP` |
+### Rules and proof
 
-All three structural holes cease securing their component when vacated. Vacated structural holes are not legal storage destinations in the launch rules.
+- Legal initial move: `S_1: H_C1 -> H_P1`.
+- Illegal: source equals destination; occupied, covered, component-owned or active structural destination; unknown IDs.
+- Release dependency: none. Vacating `H_C1` immediately releases `C_PLANK` and retires `H_C1`.
+- Exact solution: `S_1: H_C1 -> H_P1`.
+- Proven minimum: 1 transfer.
+- Reachable stable states: 2.
+- Reachable deadlocks: 0.
+- Recovery: undo returns the only completed state to the initial state.
 
-## 3. Initial state
+### Acceptance tests
 
-```text
-Screw locations:
-  S-TOP  -> H-FAST-1
-  S-SIDE -> H-FAST-2
-  S-CORE -> H-FAST-3
+1. Initial accessible screws are exactly `{S_1}` and destinations are exactly `{H_P1}`.
+2. The legal transfer releases `C_PLANK` in the same transaction.
+3. `H_C1` is a legal empty retired hole only after release.
+4. Completion is true immediately after closure, before animation.
+5. Every invalid command leaves state and history unchanged.
 
-Storage:
-  H-SVC-A empty and exposed
-  H-SVC-B empty and covered
-  R-01    empty and exposed
+## 3. T02 — Multiple Fasteners
 
-Components:
-  C-TOP  attached
-  C-SIDE attached
-  C-CORE attached
+**New concept:** one plank remains attached until both fasteners leave.
 
-Accessible screws: S-TOP, S-SIDE
-Covered screw: S-CORE
-Phase: Active
-```
+### Initial state
 
-## 4. Allowed actions
+| Item | Type/owner | Initial occupancy or state | Coverage/effect |
+|---|---|---|---|
+| `C_PLANK` | detachable component | attached | secured by `H_C1`, `H_C2` |
+| `H_C1` | baseboard structural | `S_1` | secures `C_PLANK`; exposed |
+| `H_C2` | baseboard structural | `S_2` | secures `C_PLANK`; exposed |
+| `H_P1` | baseboard parking | empty | exposed |
+| `H_P2` | baseboard parking | empty | exposed |
 
-- `S-TOP` may move to `H-SVC-A` or `R-01`.
-- `S-SIDE` is broad and may move to `R-01`; it may move to `H-SVC-B` only after that hole is exposed, which cannot happen before `C-SIDE` releases. Therefore its initial legal destination is `R-01`.
-- `S-CORE` becomes accessible only after `C-TOP` releases and may move to either exposed compatible service hole or rack slot.
-- Stored standard screws may be moved between exposed compatible storage positions to recover from an inconvenient choice.
+### Rules and proof
 
-## 5. Invalid actions
+- Legal initial moves: either structural screw to either parking hole.
+- After one transfer, the moved screw may relocate between the two parking holes; the vacated structural hole remains unavailable because `C_PLANK` is still attached.
+- Illegal: placing any screw into `H_C1` or `H_C2` before release; moving the second screw into the occupied parking hole.
+- Release dependency: none. `C_PLANK` releases only when both `H_C1` and `H_C2` are empty.
+- Exact shortest solution: `S_1: H_C1 -> H_P1`; `S_2: H_C2 -> H_P2`.
+- Proven minimum: 2 transfers.
+- Reachable stable states: 7.
+- Reachable deadlocks: 0.
+- Recovery: a redundant relocation of the first stored screw can be reversed or followed by moving the second screw into the newly empty parking hole.
 
-- Selecting covered `S-CORE`.
-- Moving `S-SIDE` to standard-only `H-SVC-A`.
-- Moving any screw to occupied or covered `H-SVC-B`.
-- Moving a screw to its source or to any vacated structural hole.
-- Tapping wood, the empty area, or a hidden destination as if it were interactive.
-- Starting a second transaction while a committed transfer/release animation is reconciling.
+### Acceptance tests
 
-Every invalid action leaves the snapshot and undo history unchanged.
+1. Either one-screw move leaves `C_PLANK` attached.
+2. A vacated active structural hole rejects parking.
+3. The second structural transfer releases the plank and retires both structural holes.
+4. Both screw orders and both destination permutations solve.
+5. Exhaustive enumeration returns 7 states, minimum 2, no deadlocks.
 
-## 6. Deterministic release behavior
+## 4. T03 — Overlapping Components
 
-- Vacating `H-FAST-1` immediately releases `C-TOP`, exposes `S-CORE`, and leaves `C-CORE` attached because `H-FAST-3` is occupied.
-- Vacating `H-FAST-2` immediately releases `C-SIDE` and exposes `H-SVC-B`.
-- Vacating `H-FAST-3` releases `C-CORE` only after `C-TOP` is already released; this dependency should already be satisfied because `S-CORE` was covered by `C-TOP`.
-- Completion occurs when `C-TOP`, `C-SIDE`, and `C-CORE` are all released/cleared.
+**New concept:** a top plank covers a lower screw and a parking hole.
 
-## 7. Hand-validated solution A
+### Initial state
 
-This trace is verified against the written state-transition rules only. It is **not** a solver result because the disassembly engine does not yet exist.
+| Item | Type/owner | Initial occupancy or state | Coverage/effect |
+|---|---|---|---|
+| `C_TOP` | detachable component | attached | secured by `H_TOP`; covers `H_BOTTOM` and `H_P2` |
+| `C_BOTTOM` | detachable component | attached | secured by `H_BOTTOM` |
+| `H_TOP` | baseboard structural | `S_TOP` | exposed; secures `C_TOP` |
+| `H_BOTTOM` | baseboard structural | `S_BOTTOM` | covered by `C_TOP`; secures `C_BOTTOM` |
+| `H_P1` | baseboard parking | empty | exposed |
+| `H_P2` | baseboard parking | empty | covered by `C_TOP` |
 
-| Step | Action | Release closure | Resulting useful state |
-|---:|---|---|---|
-| 0 | Initial | none | `H-SVC-A` and `R-01` empty; `S-TOP`, `S-SIDE` accessible |
-| 1 | Transfer `S-SIDE`: `H-FAST-2` → `R-01` | `C-SIDE` drops | `H-SVC-B` becomes exposed; rack occupied by broad screw |
-| 2 | Transfer `S-TOP`: `H-FAST-1` → `H-SVC-A` | `C-TOP` slides left | `S-CORE` becomes accessible |
-| 3 | Transfer `S-CORE`: `H-FAST-3` → `H-SVC-B` | `C-CORE` slides right | All required components released; Complete |
+### Rules and proof
 
-All destination compatibility and occupancy invariants hold after each step.
+- Only legal initial move: `S_TOP: H_TOP -> H_P1`.
+- Illegal initially: selecting `S_BOTTOM`; using `H_BOTTOM`, `H_TOP` or covered `H_P2` as a destination.
+- Release dependency: none. Moving `S_TOP` releases `C_TOP`, uncovers `S_BOTTOM` and `H_P2`, and retires `H_TOP`.
+- Exact shortest solution: `S_TOP: H_TOP -> H_P1`; `S_BOTTOM: H_BOTTOM -> H_P2`.
+- The second move may instead use retired `H_TOP`.
+- Proven minimum: 2 transfers.
+- Reachable stable states: 10.
+- Reachable deadlocks: 0.
+- Recovery: after the top releases, the parked top screw may be repositioned among legal holes without preventing completion.
 
-## 8. Alternative solution B
+### Acceptance tests
 
-| Step | Action | Purpose |
-|---:|---|---|
-| 1 | `S-TOP`: `H-FAST-1` → `H-SVC-A` | Release top and expose core screw |
-| 2 | `S-SIDE`: `H-FAST-2` → `R-01` | Release side and expose universal service hole |
-| 3 | `S-CORE`: `H-FAST-3` → `H-SVC-B` | Release core and complete |
+1. Initial accessibility is exactly `{S_TOP}` and initial destination is exactly `{H_P1}`.
+2. Geometry or collider visibility cannot make `S_BOTTOM` logically accessible early.
+3. Top release simultaneously exposes `H_BOTTOM`, exposes `H_P2`, and retires `H_TOP`.
+4. Bottom transfer to `H_P2` or `H_TOP` completes.
+5. Exhaustive enumeration returns 10 states, minimum 2, no deadlocks.
 
-The first two moves commute, so the tutorial demonstrates meaningful freedom without a dead end.
+## 5. T04 — Strategic Scarcity
 
-## 9. Recovery example
+**New concept:** one initial parking hole is enough because each single-fastener release retires a structural hole for reuse.
 
-If the player moves `S-TOP` to `R-01`, `S-SIDE` temporarily has no destination. This is not declared a loss because the player can transfer `S-TOP` from `R-01` to `H-SVC-A`, freeing `R-01`, then continue. The hint system should recommend that recovery move. Undo provides an additional recovery path.
+### Initial state
 
-## 10. Expected interaction sequence
+| Item | Type/owner | Initial occupancy or state | Coverage/effect |
+|---|---|---|---|
+| `C_LEFT` | detachable component | attached | secured by `H_LEFT` |
+| `C_RIGHT` | detachable component | attached | secured by `H_RIGHT` |
+| `H_LEFT` | baseboard structural | `S_LEFT` | exposed; secures `C_LEFT` |
+| `H_RIGHT` | baseboard structural | `S_RIGHT` | exposed; secures `C_RIGHT` |
+| `H_P1` | baseboard parking | empty | the only initial legal destination |
 
-1. Initial instruction: “Move a screw to an open service hole.” Highlight `S-TOP` and `H-SVC-A` without forcing the action.
-2. Tapping a screw raises it slightly and highlights legal destinations.
-3. Destination tap commits state, then the screw withdraws, travels, and inserts.
-4. The unsecured component follows its authored path; new screw/hole exposure receives a brief outline.
-5. HUD displays progress `0/3`, `1/3`, etc., plus undo, restart, hint, and pause.
-6. Final component clears and a restrained completion panel appears.
+### Rules and proof
 
-## 11. Undo, restart, save/resume
+- Legal initial moves: either screw to `H_P1`.
+- Whichever component releases first retires its source structural hole, creating the next empty legal destination.
+- Illegal: moving the other screw into the still occupied `H_P1`; moving into either active structural hole.
+- Release dependencies: none.
+- Exact shortest solution: `S_LEFT: H_LEFT -> H_P1`; `S_RIGHT: H_RIGHT -> H_LEFT`.
+- The mirrored right-first solution is also valid.
+- Proven minimum: 2 transfers.
+- Reachable stable states: 9.
+- Reachable deadlocks: 0.
+- Recovery: either first choice is safe; parked-screw relocation can be undone without losing the retired hole.
 
-- Undo after any step restores the source screw, destination vacancy, component attachment, coverage, progress, and camera framing.
-- Restart returns exactly to step 0 after confirmation.
-- Saving after step 1 or 2 must restore the same screw locations, attached/released components, exposed destinations, and legal-action set.
-- Pause/focus interruption during an animation reconciles to the already committed snapshot.
+### Capacity transition
 
-## 12. Solver validation plan
+Before step 1, `E=1`. The transfer consumes `H_P1`, then release retires `H_LEFT`, returning `E=1`. Step 2 consumes that hole and releases `C_RIGHT`, retiring `H_RIGHT`, so completion occurs with `E=1`. Capacity is reused, not invented and no screw disappears.
 
-After implementation, encode the level as a `DisassemblyDefinition` and require:
+### Acceptance tests
 
-- solver reports solved;
-- shortest solution length is three transfers;
-- both orderings above are accepted;
-- the recovery state with `S-TOP` in `R-01` remains solvable;
-- `S-SIDE` → `H-SVC-A` is rejected atomically;
-- every state reachable within a bounded search is either solvable or has a one-step undo path;
-- deterministic action order produces a stable golden solution for test purposes.
+1. Initial legal destination count is exactly one.
+2. Either first structural transfer releases exactly its component.
+3. The vacated source changes from active structural to retired parking only after release.
+4. The opposite screw can use that retired hole and complete.
+5. Exhaustive enumeration returns 9 states, minimum 2, no deadlocks.
 
-Until those tests exist, the level status remains **Proposed / awaiting engine validation**.
+## 6. T05 — Recovering a Mistake
 
-## 13. Representative tests
+**New concept:** a tempting partial removal can consume visible capacity; undo restores a solvable route.
 
-### EditMode
+### Initial state
 
-1. Initial accessibility returns only `S-TOP` and `S-SIDE`.
-2. Destination query enforces broad/standard compatibility.
-3. Moving `S-TOP` releases `C-TOP` and exposes `S-CORE` in one transaction.
-4. Moving `S-SIDE` releases `C-SIDE` and exposes `H-SVC-B`.
-5. Invalid occupied/covered/incompatible destinations do not mutate canonical state.
-6. Undo restores exact prior screw locations, component state, counters, and exposure.
-7. Solver accepts solution A and B and the recovery state.
-8. Completion ignores final screw storage positions and requires all three components released.
+| Item | Type/owner | Initial occupancy or state | Coverage/effect |
+|---|---|---|---|
+| `C_KEY` | detachable component | attached | secured by `H_KEY`; covers `H_P3` |
+| `C_TRIPLE` | detachable component | attached | secured by `H_T1`, `H_T2`, `H_T3` |
+| `H_KEY` | baseboard structural | `S_KEY` | exposed; secures `C_KEY` |
+| `H_T1` | baseboard structural | `S_T1` | exposed; secures `C_TRIPLE` |
+| `H_T2` | baseboard structural | `S_T2` | exposed; secures `C_TRIPLE` |
+| `H_T3` | baseboard structural | `S_T3` | exposed; secures `C_TRIPLE` |
+| `H_P1` | baseboard parking | empty | exposed |
+| `H_P2` | baseboard parking | empty | exposed |
+| `H_P3` | baseboard parking | empty | covered by `C_KEY` |
 
-### PlayMode
+### Rules and proof
 
-1. Actual Input System tap selects the correct screw and destination through the UI.
-2. Covered `S-CORE` has no reachable hit action until `C-TOP` releases.
-3. State commits before extraction animation and survives disable/pause.
-4. Release path ends in the snapshot-defined cleared pose.
-5. Undo during/after motion restores every home pose.
-6. All screws, destinations, buttons, and feedback remain usable at 9:16, 9:19.5, 9:21, and 3:4.
+- Initially any accessible screw may move to `H_P1` or `H_P2`.
+- Moving `S_KEY` releases `C_KEY`, retires `H_KEY`, and uncovers `H_P3`. This raises empty legal capacity from 2 before the move to 3 after closure.
+- Moving two `C_TRIPLE` screws into `H_P1` and `H_P2` first leaves `C_TRIPLE` attached, `C_KEY` attached, and no legal destination. That snapshot has no currently legal moves.
+- Exact shortest solution: `S_KEY: H_KEY -> H_P1`; `S_T1: H_T1 -> H_KEY`; `S_T2: H_T2 -> H_P2`; `S_T3: H_T3 -> H_P3`.
+- Proven minimum: 4 transfers.
+- Reachable stable states: 149.
+- Reachable deadlocks: 6.
+- Shortest deadlock example: `S_T1: H_T1 -> H_P1`; `S_T2: H_T2 -> H_P2`.
+- Recovery: undo the second transfer, move `S_KEY` into the freed parking hole, then finish the three-fastener component. Restart is also available. The no-move snapshot is not a solver timeout and is not monetized.
+
+### Acceptance tests
+
+1. `S_KEY` release exposes exactly `H_KEY` and `H_P3` as new empty legal destinations.
+2. All three `C_TRIPLE` structural holes must be empty before release.
+3. The documented two-move mistake yields no legal move and is not complete.
+4. Undo restores the exact one-mistake snapshot and a legal route remains.
+5. Solver reports `ProvenSolution` with minimum 4 from the initial state.
+6. Exhaustive enumeration returns 149 states and exactly 6 no-move deadlocks.
+
+## 7. Negative control NC01 — Three Transfers Into Two Fixed Holes
+
+This is not a playable tutorial. One component has three occupied structural holes and only two exposed persistent parking holes. It cannot release until all three fasteners move. Structural holes do not retire before release and parked-screw relocation cannot increase capacity.
+
+The verifier exhaustively returns `PROVEN_NO_SOLUTION`, 13 reachable states and 6 no-move deadlocks. This directly rejects the prior three-transfer/two-position proposal when no rack, disappearance or intermediate capacity is present.
+
+## 8. Shared presentation acceptance
+
+For every tutorial, Unity production tests must also prove:
+
+- input uses the actual pointer/touch path while logical legality remains independent of hit testing;
+- state commits before animation and completion does not wait for it;
+- disable, pause, focus loss, undo, restart and load reconcile from the snapshot;
+- all screws, holes and controls remain reachable at 9:16, 9:19.5, 9:21 and 3:4;
+- no developer controls appear in the player HUD;
+- physical Android evidence is required before claiming touch or visual acceptance.
+
+## 9. Workshop Latch disposition
+
+`DS-INTRO-01 Workshop Latch` is no longer the first tutorial. Preserve it as a later candidate. Before reuse, rewrite its destinations under the selected no-rack, universal-screw rules and certify the resulting JSON fixture with the same verifier and production engine.

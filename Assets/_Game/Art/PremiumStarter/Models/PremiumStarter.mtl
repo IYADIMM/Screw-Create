@@ -1,0 +1,37 @@
+newmtl Oak_Natural
+Kd 0.8 0.72 0.64
+Ks 0.12 0.12 0.12
+Ns 28
+map_Kd ../Textures/Oak_Natural_BaseColor.png
+
+newmtl Birch_Honey
+Kd 0.89 0.83 0.75
+Ks 0.12 0.12 0.12
+Ns 28
+map_Kd ../Textures/Birch_Honey_BaseColor.png
+
+newmtl Walnut_Warm
+Kd 0.78 0.75 0.72
+Ks 0.12 0.12 0.12
+Ns 28
+map_Kd ../Textures/Walnut_Warm_BaseColor.png
+
+newmtl Brass_Satin
+Kd 0.73 0.52 0.23
+Ks 0.8 0.7 0.52
+Ns 150
+
+newmtl Steel_Satin
+Kd 0.54 0.59 0.61
+Ks 0.9 0.92 0.94
+Ns 180
+
+newmtl Screw_Recess
+Kd 0.055 0.051 0.043
+Ks 0.1 0.1 0.1
+Ns 32
+
+newmtl Hole_Interior
+Kd 0.025 0.029 0.025
+Ks 0.03 0.03 0.03
+Ns 8

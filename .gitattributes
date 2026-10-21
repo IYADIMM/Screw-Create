@@ -1,0 +1,3 @@
+# Preserve the source-pack OBJ/MTL bytes so manifest SHA-256 values survive checkout.
+Assets/_Game/Art/PremiumStarter/Models/*.obj -text
+Assets/_Game/Art/PremiumStarter/Models/*.mtl -text

@@ -1,242 +1,138 @@
 # Phase 2 Disassembly Implementation Plan
 
-Status: **READY FOR REVIEW — implementation not authorized**
-Dependency order is binding unless new source evidence requires a documented change.
+Status: **REVISED AFTER PHASE 2.1 FEASIBILITY GATE — implementation approval pending**
 
-## M0 — Approval and source checkpoint
+## M0 — Rule approval and protected baseline
 
-**Approval required:** controlled-hybrid rules, Workshop Latch slice, parallel domain architecture, dormant part inventory/assembly presentation.
+Approval must name:
 
-After approval:
+- staged persistent-baseboard relocation rules;
+- no rack and universal screws for the first five levels;
+- no re-fastening in launch rules;
+- parallel stateful disassembly session with pure shared transitions;
+- separate versioned disassembly save envelope;
+- T01 as the first production slice.
 
-1. Record the decision in `Docs/Decisions.md`.
-2. Verify branch/HEAD and preserved untracked files.
-3. Create a dedicated implementation branch from the current specification commit; do not recreate the Phase 1 baseline.
-4. Confirm protected Core changes, if any, are explicitly in the approved scope.
+Before implementation, record branch/HEAD/status, confirm the Phase 2.1 verifier passes, preserve existing untracked Unity files, and confirm no protected Core diff.
 
-**Gate:** approved design decision and cleanly recoverable source state.
+**Gate:** explicit user approval and recoverable source state.
 
-## M1 — Disassembly domain model and validator
+## M1 — Smallest production milestone: T01 pure domain
 
-Add under `Assets/_Game/Scripts/Runtime/Disassembly/`:
+Add a separate assembly under `Assets/_Game/Scripts/Runtime/Disassembly/` containing only:
 
-- `ScrewAndCreate.Disassembly.asmdef`
-- `DisassemblyModel.cs`
-- `DisassemblySnapshot.cs`
-- `DisassemblyDefinitionValidator.cs`
+- immutable `DisassemblyDefinition`, `ComponentDefinition`, `HoleDefinition` and `ScrewDefinition` data;
+- serializable `DisassemblySnapshot`;
+- definition and snapshot validators;
+- pure occupancy, exposure, destination, transfer and deterministic release-closure functions;
+- canonical key preserving distinct screw IDs;
+- `DisassemblySession` owning current snapshot and exact undo history;
+- explicit transaction results and no-currently-legal-moves query.
 
-Define IDs, structural/service/rack locations, compatibility groups, covers, securing sites, release dependencies, release paths, completion targets, and snapshot canonical key.
+Encode only T01 First Release as a test fixture. Do not create or modify a Unity scene in this milestone.
 
-Tests under `Assets/_Game/Tests/EditMode/Disassembly/`:
+Tests must prove:
 
-- duplicate/missing IDs and references;
-- occupancy and initial-location uniqueness;
-- coverage/release cycles;
-- invalid destination compatibility;
-- disappearing/nonpersistent storage rejection;
-- canonical-key stability.
+1. all T01 definition and initial-state invariants;
+2. exact legal screw and destination sets;
+3. atomic rejection with no state/history mutation;
+4. one transfer releases the component and completes before presentation;
+5. undo restores exact state;
+6. canonical key stability;
+7. parity with the Python T01 state count and solution;
+8. every existing EditMode test still passes.
 
-**Gate:** all new validation tests plus existing 27 EditMode tests pass. No scene changes.
+**Gate:** pure-domain T01 parity and zero existing regressions. Stop for review.
 
-## M2 — Authoritative engine and release closure
+## M2 — Explicit-outcome solver and five-fixture parity
 
-Add `DisassemblyEngine.cs` with:
+Add a solver that calls the same transition function as `DisassemblySession` and returns `ProvenSolution`, `ProvenNoSolution`, `ResourceLimitReached` or `Cancelled`.
 
-- `GetAccessibleScrews()`;
-- `GetLegalDestinations(screwId)`;
-- `CanTransferScrew(...)`;
-- `TryTransferScrew(...)`;
-- deterministic release closure;
-- completion/deadlock phase transitions;
-- capture/restore/validate snapshot;
-- exact undo and hint-count policy.
-
-Use one transaction for source vacancy, destination occupancy, release closure, counters, and undo.
-
-Tests:
-
-- Workshop Latch legal sequence and both opening orders;
-- covered screw exposure;
-- compatibility/occupancy rejection with unchanged state;
-- deterministic simultaneous releases;
-- one action/one undo entry;
-- undo after multi-component closure;
-- completion independent of final screw storage position;
-- restart-equivalent initial snapshot.
-
-**Gate:** mutation/property invariants pass; existing mixed `PuzzleEngine` tests remain unchanged.
-
-## M3 — Solver, hints, and deadlock proof
-
-Add `DisassemblySolver.cs` using the same engine transaction. Start with deterministic breadth-first search for shortest tutorial paths; permit a bounded alternative only after profiling.
-
-Add:
+Requirements:
 
 - stable successor order by screw ID then destination ID;
-- canonical visited states;
-- solved/unsolved/resource-limit distinction;
-- first-action hint;
-- shortest solution and reachable-deadlock metrics.
+- visited-state pruning using the canonical key;
+- explicit state/time limits and cancellation;
+- exhaustive mode for small fixtures;
+- incremental or worker execution for larger searches;
+- no screw symmetry reduction without behavioral-equivalence proof.
 
-Tests:
+Port T01–T05 and NC01 as C# fixtures. Assert exact reachable states, minimum lengths and deadlock counts from `Phase21FeasibilityReport.json`.
 
-- Workshop Latch shortest length three;
-- both authored solution orders reachable;
-- rack-recovery state solved;
-- intentionally incompatible fixture unsolved;
-- resource-limit result distinct from unsolved;
-- hint always legal and belongs to a solution path;
-- deterministic repeated solution.
+**Gate:** exact Python/C# parity and explicit resource-limit tests.
 
-**Gate:** solver proof for the slice and no false completion/deadlock in exhaustive small-fixture enumeration.
+## M3 — Separate save envelope
 
-## M4 — Save schema and migration
+Add a namespaced version-1 disassembly save without changing `Assets/_Game/Scripts/Runtime/Core/SaveData.cs`.
 
-Preferred future change: extend `Assets/_Game/Scripts/Runtime/Core/SaveData.cs` with an explicit active game-mode discriminator and versioned disassembly payload, incrementing the save version. Do not reinterpret an existing `PuzzleSnapshot` as disassembly state.
+Test:
 
-Tests:
+- snapshot round trip and definition/content identity;
+- malformed occupancy and unknown IDs;
+- checksum failure and previous-copy recovery if the existing atomic service pattern is reused;
+- current construction save and v1-to-v2 migration regression.
 
-- existing v1→v2 migration still passes;
-- v2 mixed save migrates without losing construction state;
-- new disassembly save round trip;
-- invalid location/component state rejection;
-- CRC corruption and previous-copy recovery;
-- pause/focus save and restore parity.
+**Gate:** construction saves remain byte-for-behavior compatible.
 
-**Gate:** all save tests and old fixtures pass before presentation integration.
+## M4 — T01 data asset and authoring validation
 
-## M5 — Data-driven Workshop Latch asset
+Create a serialized T01 asset outside controllers. Validate unique IDs, view-to-logic mapping, hole ownership, structural assignments, cover references, recorded screw axes, colliders, interaction layers and screen-space target size.
 
-Add a data asset or serialized authoring component under `Assets/_Game/Data/Disassembly/DS-INTRO-01/`. Avoid hard-coded definitions in a controller.
+**Gate:** serialized asset produces the same canonical initial state and one-step proof as the test fixture.
 
-Add an editor validator that confirms:
+## M5 — Separate T01 graybox presentation
 
-- logical IDs match view IDs;
-- every view/prefab/path exists;
-- colliders and interaction layers are correct;
-- initial transforms and local screw axes are recorded;
-- service-hole targets meet minimum screen-space size at supported ratios;
-- cover/layer order agrees with definition;
-- solver accepts the serialized level.
-
-**Gate:** serialized asset validates and produces the same golden solver solution in batch mode.
-
-## M6 — Separate presentation slice
-
-Create a new scene, for example:
-
-`Assets/_Game/Scenes/Gameplay_Disassembly_WorkshopLatch_Graybox.unity`
-
-Do not overwrite `Gameplay_Windmill_Graybox.unity`.
-
-Add under `Runtime/Presentation/Disassembly/`:
-
-- `DisassemblyBoardController.cs`
-- `DisassemblyScrewView.cs`
-- `FastenerHoleView.cs`
-- `DisassemblyComponentView.cs`
-- `ReleasePathView.cs`
-- `ScrewRackView.cs`
-
-Reuse `PlayfieldFitter`, `SafeAreaFitter`, explicit interaction layers, UI-selectable blocking, local screw-axis animation, and snapshot reconciliation.
+Create a new disassembly scene. Do not overwrite the Windmill graybox. Reuse safe-area and playfield fitting utilities where suitable.
 
 The controller must:
 
-- ask the engine for accessibility and destinations;
+- query logical accessibility and destinations;
 - commit before animation;
-- animate extraction, transfer, insertion, and release paths;
-- reconcile on disable/pause/focus/load/undo/restart;
-- expose no part tray, assembly sockets, blueprint ghosts, or rotate control.
+- animate toward the committed snapshot;
+- reconcile on undo, restart, load, disable, pause and focus change;
+- expose no construction tray, sockets, rotate control or developer save/load panel.
 
-**Gate:** compilation plus controller-focused PlayMode tests.
+**Gate:** pointer-path PlayMode tests and interruption reconciliation pass.
 
-## M7 — HUD and accessibility
+## M6 — Tutorial sequence and device-facing HUD
 
-Retain undo, restart, hint, pause, status, and progress. Replace tray count and construction guidance with component-clear progress and selected-screw destination guidance.
+Add T02–T05 one at a time, preserving one new concept per level. Use component-clear progress, undo, restart, hint and pause. Use shape and motion cues without color-matching semantics.
 
-Add:
+Test 9:16, 9:19.5, 9:21 and 3:4 for fit, safe area, touch targets and text. Hints must come from a proven solution path. A no-move state offers undo/restart and is never inferred from solver resource exhaustion.
 
-- visible selected screw;
-- legal/illegal destination states with shape/pattern reinforcement;
-- clear reason text for covered/incompatible/occupied actions;
-- reduced motion and haptics settings;
-- no debug SAVE/LOAD/DEV exposure.
+**Gate:** all five C# exhaustive metrics match the Phase 2.1 report; PlayMode evidence exists for each concept.
 
-Tests at 9:16, 9:19.5, 9:21, and 3:4:
+## M7 — Android development verification
 
-- every screw and destination inside reserved bounds;
-- buttons inside safe area with no overlap;
-- actual Input System pointer route reaches each interactive type;
-- decorative UI/geometry cannot intercept input;
-- text remains outside the active board.
+Build a development APK only after compilation and Unity suites pass. Record commit, size, SHA-256, build log and screenshot provenance. On a physical device verify install, portrait framing, taps, destination selection, release, undo/restart/hint/pause, lifecycle recovery and save/resume.
 
-**Gate:** four-ratio PlayMode suite and screenshot review.
+**Gate:** device report identifies phone, Android version, APK hash and unresolved limitations.
 
-## M8 — Animation, feel, and interruption safety
+## M8 — Mandatory visual-quality milestone
 
-Implement short state-driven sequences without adding DOTween:
+After the gameplay slice is validated, replace visible TEMP primitives with original beveled wood components, recognizable mechanically aligned screws, URP Lit materials, wood texture treatment, differentiated holes, contact shadows, professional lighting and functional portrait UI. Keep developer controls hidden and touch targets reliable.
 
-- screw head response and local-axis withdrawal;
-- transfer arc or direct motion;
-- insertion and settle;
-- deterministic component drop/slide/hinge path;
-- restrained particles, audio hooks, and haptic interface.
+No paid asset, download or external-generation credit is authorized by this plan. Obtain approval for any exact asset batch or credit use before acquisition.
 
-Tests:
+**Gate:** device screenshots and play evidence; a successful compile alone is insufficient.
 
-- state commits once before animation;
-- pause/disable/focus during each animation reconciles correctly;
-- repeated undo/restart/load has no pose drift;
-- rapid taps and multi-touch noise do not double commit;
-- reduced-motion path is semantically identical.
+## M9 — Later mechanics decision
 
-**Gate:** no visual-state drift and no rule logic duplicated in presentation.
+Only after playtesting the base rule set, separately evaluate compatibility groups, optional racks, component-owned temporary holes, hinges, procedural generation and construction-mode integration. Each addition needs a player-facing purpose, transition semantics and solver proof.
 
-## M9 — Complete vertical-slice verification
-
-Run:
-
-- all existing EditMode and PlayMode tests;
-- complete new disassembly test suites;
-- solver proof and exhaustive small-state checks;
-- actual PlayMode screenshots for initial, selection, transfer, release, undo, save/reload, and completion;
-- Unity compilation/project validation;
-- Android development APK build.
-
-Record discovered/executed/pass/fail/skip counts, logs, screenshot origin, APK size/hash, and limitations.
-
-**Gate:** zero unexplained failures; Workshop Latch is solver-proven and playable without assembly.
-
-## M10 — Physical Android verification
-
-On a representative phone verify install/launch, portrait lock, cutouts, touch targets, selection/destination flow, animation interruption, undo/restart/hint/pause, save/resume, thermal behavior, and frame/memory evidence.
-
-**Gate:** device report with model/OS/build hash and screenshots. Editor evidence cannot satisfy this gate.
-
-## M11 — Asset-production decision
-
-Only after the graybox mechanic is approved:
-
-1. approve exact free candidates or Blender tasks;
-2. import one controlled batch;
-3. update `AssetManifest.csv` and license evidence;
-4. profile before expanding the kit.
-
-No paid or credit-consuming generation is assumed.
-
-## Change-risk review
+## Risk controls
 
 | Risk | Control |
 |---|---|
-| Breaking construction logic | Parallel domain; run all current tests; do not change `PuzzleEngine` semantics |
-| Save incompatibility | Explicit version/mode discriminator and migration tests |
-| Solver/gameplay divergence | Solver invokes the same engine transaction |
+| Breaking construction | Parallel assembly/domain/save; protected Core unchanged |
+| Rule divergence | One pure transition function for session, solver, hints and tests |
+| Storage contradiction | Validator diagnostics plus exhaustive fixture certification |
+| False deadlock | Separate no-move query from solver outcome and undo state |
+| Main-thread stalls | Limits, cancellation and nonblocking large searches |
 | Scene loss | New scene path; preserve Windmill graybox and builder |
-| UI/input regressions | Reuse Phase 1 interaction layer and real pointer-path tests |
-| Animation state drift | Commit first and reconcile from snapshot |
-| Unfair deadlocks | Exhaustive small-level analysis and bounded solver proof |
-| Asset/license contamination | Per-asset manifest and approval before import |
+| Visual overclaim | Require runtime and physical-device evidence |
+| Credit use | No paid or external generation without exact user approval |
 
-## Approval checkpoint
+## Stop condition
 
-Stop after this plan. The next implementation milestone is **M1: disassembly domain model and validator**, and it must not begin until the user approves the recommended rules and architecture.
+Phase 2.1 ends with corrected documents and executable feasibility evidence. Do not begin M1 until the user explicitly approves the selected rules and architecture. Do not push or merge this correction branch without explicit permission.
