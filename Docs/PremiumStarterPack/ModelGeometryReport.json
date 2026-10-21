@@ -1,0 +1,52 @@
+{
+  "Board_Base_Oak.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Board_Base_Walnut.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Hole_Brass_Rim.obj": {
+    "geometry_count": 2,
+    "vertex_count": 608,
+    "face_count": 288
+  },
+  "Hole_Steel_Rim.obj": {
+    "geometry_count": 2,
+    "vertex_count": 608,
+    "face_count": 288
+  },
+  "Panel_Square_Walnut.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Plank_Long_Oak.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Plank_Narrow_Oak.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Plank_Wide_Birch.obj": {
+    "geometry_count": 1,
+    "vertex_count": 330,
+    "face_count": 142
+  },
+  "Screw_Phillips_Brass.obj": {
+    "geometry_count": 2,
+    "vertex_count": 1088,
+    "face_count": 508
+  },
+  "Screw_Phillips_Steel.obj": {
+    "geometry_count": 2,
+    "vertex_count": 1088,
+    "face_count": 508
+  }
+}

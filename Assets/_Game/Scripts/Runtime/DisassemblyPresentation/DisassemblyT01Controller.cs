@@ -30,6 +30,13 @@ namespace ScrewAndCreate.DisassemblyPresentation
         public Material ScrewIdleMaterial;
         public Material ScrewSelectedMaterial;
         public Material InvalidMaterial;
+        public AudioSource EffectsSource;
+        public AudioClip ScrewSelectClip;
+        public AudioClip ScrewUnscrewClip;
+        public AudioClip ScrewInsertClip;
+        public AudioClip WoodReleaseClip;
+        public AudioClip LevelCompleteClip;
+        [Range(0f, 1f)] public float EffectsVolume = 0.42f;
         public bool ReducedMotion;
 
         DisassemblyDefinition _definition;
@@ -217,6 +224,7 @@ namespace ScrewAndCreate.DisassemblyPresentation
             }
             _selectedScrewId = screwId;
             ApplySelectionVisuals();
+            PlayEffect(ScrewSelectClip, 0.62f);
             Status("Now tap the glowing empty hole.");
             return true;
         }
@@ -261,6 +269,7 @@ namespace ScrewAndCreate.DisassemblyPresentation
             var approach = destination.position - destination.up * 0.62f;
 
             Status("Loosening the screw…");
+            PlayEffect(ScrewUnscrewClip, 0.48f);
             yield return Animate(0.28f, t =>
             {
                 screw.transform.position = Vector3.Lerp(startPosition, withdraw, Smooth(t));
@@ -274,6 +283,7 @@ namespace ScrewAndCreate.DisassemblyPresentation
                 screw.transform.rotation = Quaternion.Slerp(startRotation, destination.rotation, Smooth(t)) * Quaternion.AngleAxis(t * 360f, Vector3.up);
             });
             Status("Securing the screw…");
+            PlayEffect(ScrewInsertClip, 0.46f);
             yield return Animate(0.24f, t =>
             {
                 screw.transform.position = Vector3.Lerp(approach, destination.position, Smooth(t));
@@ -286,6 +296,7 @@ namespace ScrewAndCreate.DisassemblyPresentation
                 var start = component.transform.position;
                 var rotation = component.transform.rotation;
                 Status("The wooden plank is free!");
+                PlayEffect(WoodReleaseClip, 0.5f);
                 yield return Animate(0.48f, t =>
                 {
                     component.transform.position = Vector3.Lerp(start, component.ReleasedPose.position, Smooth(t));
@@ -299,6 +310,7 @@ namespace ScrewAndCreate.DisassemblyPresentation
             {
                 _completionShown = true;
                 if (CompletionPanel != null) CompletionPanel.SetActive(true);
+                PlayEffect(LevelCompleteClip, 0.42f);
                 Status("Level complete!");
             }
         }
@@ -466,6 +478,11 @@ namespace ScrewAndCreate.DisassemblyPresentation
         DisassemblyScrewView Screw(string id) => Screws.First(x => x.Id == id);
         DisassemblyHoleView Hole(string id) => Holes.First(x => x.Id == id);
         DisassemblyComponentView Component(string id) => Components.First(x => x.Id == id);
+        void PlayEffect(AudioClip clip, float relativeVolume)
+        {
+            if (EffectsSource != null && clip != null)
+                EffectsSource.PlayOneShot(clip, Mathf.Clamp01(EffectsVolume * relativeVolume));
+        }
         void Status(string message) { if (StatusText != null) StatusText.text = message; }
     }
 }
